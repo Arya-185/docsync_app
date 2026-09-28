@@ -222,25 +222,42 @@ class ChatStep {
   /// noise once the turn is over. Dropped from the finished trail.
   final bool transient;
 
+  /// When the line opened on this device, and how long it ran once closed — the "1.2s" in
+  /// the checklist. Display-only timing, measured client-side, so deliberately left out of
+  /// equality: two trails that say the same thing are the same trail.
+  final DateTime? startedAt;
+  final double? seconds;
+
   const ChatStep({
     this.seq,
     required this.label,
     this.done = false,
     this.failed = false,
     this.transient = false,
+    this.startedAt,
+    this.seconds,
   });
 
   /// The synthetic "Sending your question" line, opened before the server has said
   /// anything. Negative so it can never collide with a real server seq.
   static const int sentSeq = -1;
 
-  ChatStep copyWith({String? label, bool? done, bool? failed}) => ChatStep(
-        seq: seq,
-        label: label ?? this.label,
-        done: done ?? this.done,
-        failed: failed ?? this.failed,
-        transient: transient,
-      );
+  /// Closing a timed line stamps its duration once; later copies keep it.
+  ChatStep copyWith({String? label, bool? done, bool? failed}) {
+    final closing = (done ?? this.done) && !this.done;
+    return ChatStep(
+      seq: seq,
+      label: label ?? this.label,
+      done: done ?? this.done,
+      failed: failed ?? this.failed,
+      transient: transient,
+      startedAt: startedAt,
+      seconds: seconds ??
+          (closing && startedAt != null
+              ? DateTime.now().difference(startedAt!).inMilliseconds / 1000
+              : null),
+    );
+  }
 
   @override
   bool operator ==(Object other) =>
@@ -314,6 +331,9 @@ class RagEvent {
   /// `confirm`: the full proposal.
   final ConfirmProposal? proposal;
 
+  /// `final`: the turn ended because the user pressed Stop (`rag_stop.php`).
+  final bool stopped;
+
   const RagEvent(
     this.type, {
     this.conversationId,
@@ -335,6 +355,7 @@ class RagEvent {
     this.a2uiMessage,
     this.supersedes,
     this.proposal,
+    this.stopped = false,
   });
 
   factory RagEvent.fromJson(Map<String, dynamic> j) {
@@ -387,6 +408,7 @@ class RagEvent {
           RagEventType.finalAnswer,
           answer: (j['answer'] ?? '').toString(),
           elapsed: _num(j['elapsed']),
+          stopped: j['stopped'] == true,
           citations: (j['citations'] as List?)
                   ?.map((c) => Citation.fromJson(Map<String, dynamic>.from(c)))
                   .toList() ??
@@ -489,6 +511,10 @@ class ChatState {
   /// The trail is finished (every line closed, transients dropped) and collapses.
   final bool trailDone;
 
+  /// Stop was pressed and the running turn has not ended yet. The server only checks its stop
+  /// flag between decision rounds, so this can last a few seconds.
+  final bool stopping;
+
   const ChatState({
     this.messages = const [],
     this.conversationId = 0,
@@ -497,6 +523,7 @@ class ChatState {
     this.trail = const [],
     this.elapsed = 0,
     this.trailDone = false,
+    this.stopping = false,
   });
 
   bool get sending => status == ChatStatus.sending;
@@ -509,6 +536,7 @@ class ChatState {
     List<ChatStep>? trail,
     double? elapsed,
     bool? trailDone,
+    bool? stopping,
   }) =>
       ChatState(
         messages: messages ?? this.messages,
@@ -518,5 +546,6 @@ class ChatState {
         trail: trail ?? this.trail,
         elapsed: elapsed ?? this.elapsed,
         trailDone: trailDone ?? this.trailDone,
+        stopping: stopping ?? this.stopping,
       );
 }

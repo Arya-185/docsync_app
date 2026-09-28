@@ -11,8 +11,6 @@ class ChatRepository {
   ChatRepository(this._api);
   final ApiClient _api;
 
-  /// Ask AI. Streams [RagEvent]s parsed from the SSE response of rag_answer.php.
-  /// [conv] = 0 starts a new conversation.
   /// Follow a turn that is already running on the server, reconnecting until it ends.
   ///
   /// A turn belongs to the conversation, not to the client that started it: it keeps running
@@ -28,14 +26,16 @@ class ChatRepository {
   /// exhaust the pool; it says so with `resume_end.status == "running"` and the sequence number
   /// reached, and reconnecting from there is this method's job. The resume bookkeeping is
   /// consumed here so callers see only real turn events.
-  Stream<RagEvent> followStream(int conv, {int after = 0}) async* {
+  Stream<RagEvent> followStream(int conv, {int after = 0, CancelToken? cancel}) async* {
     var cursor = after;
     for (var attempt = 0; attempt < 40; attempt++) {
+      if (cancel?.isCancelled ?? false) return;
       final Response<ResponseBody> resp;
       try {
         resp = await _api.dio.get<ResponseBody>(
           _api.url('/app/rag_stream.php'),
           queryParameters: {'conv': conv, 'after': cursor},
+          cancelToken: cancel,
           options: Options(
             responseType: ResponseType.stream,
             receiveTimeout: AppConfig.answerTimeout,
@@ -89,12 +89,32 @@ class ChatRepository {
     }
   }
 
-  Stream<RagEvent> answerStream(String query, {int conv = 0, int k = AppConfig.defaultK}) async* {
+  /// Ask AI. Streams [RagEvent]s parsed from the SSE response of rag_answer.php.
+  /// [conv] = 0 starts a new conversation.
+  ///
+  /// [voice] asks the server for a reply meant to be SPOKEN (short, no tables or markdown);
+  /// [lang] is the language the user spoke, as reported by speech-to-text, so the reply matches
+  /// it. Both are only sent when set, so an older server simply ignores a request that has none.
+  Stream<RagEvent> answerStream(
+    String query, {
+    int conv = 0,
+    int k = AppConfig.defaultK,
+    bool voice = false,
+    String? lang,
+    CancelToken? cancel,
+  }) async* {
     final Response<ResponseBody> resp;
     try {
       resp = await _api.dio.post<ResponseBody>(
         _api.url('/app/rag_answer.php'),
-        data: {'query': query, 'k': k, 'conv': conv},
+        data: {
+          'query': query,
+          'k': k,
+          'conv': conv,
+          if (voice) 'voice': 1,
+          if (voice && lang != null && lang.isNotEmpty) 'lang': lang,
+        },
+        cancelToken: cancel,
         options: Options(
           contentType: Headers.formUrlEncodedContentType,
           responseType: ResponseType.stream,
@@ -186,6 +206,26 @@ class ChatRepository {
       return CommitResult(false, _dioMessage(e));
     } catch (_) {
       return const CommitResult(false, 'Request failed.');
+    }
+  }
+
+  /// Ask the server to stop the turn running on [conv]. True when a running turn was flagged.
+  ///
+  /// `rag_stop.php` only raises a flag: the agent checks it before its next decision round and
+  /// then ends with a `final` carrying `stopped: true`. So the stream keeps going briefly after
+  /// this returns, and the UI says "Stopping…" until it ends — the same as the web page.
+  Future<bool> stop(int conv) async {
+    if (conv <= 0) return false;
+    try {
+      final r = await _api.dio.post(
+        _api.url('/app/rag_stop.php'),
+        data: {'conv': conv},
+        options: Options(contentType: Headers.formUrlEncodedContentType),
+      );
+      final body = _asMap(r.data);
+      return body != null && body['ok'] == true && body['stopped'] == true;
+    } catch (_) {
+      return false;
     }
   }
 

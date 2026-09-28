@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:background_downloader/background_downloader.dart';
 import 'package:dio/dio.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../../core/config.dart';
 import '../../../core/network/api_client.dart';
@@ -31,22 +34,65 @@ class DownloadRepository {
   /// Download [file]; reports 0..1 progress via [onProgress] (also shown in the
   /// notification). Returns the saved public path (may be null if the OS didn't
   /// report one). Throws [DownloadException].
-  Future<String?> download(DocFile file, {void Function(double p)? onProgress}) {
-    final op = _run(file, onProgress);
+  Future<String?> download(DocFile file, {void Function(double p)? onProgress}) =>
+      _serialized(() => _run(file, onProgress));
+
+  /// Fetch [file] into the app's private cache for Preview/Share, reusing a cached copy
+  /// unless [refresh]. Not a public download: no notification, nothing in Downloads.
+  /// Runs under the same lock as [download] because both move `cf_client_id`.
+  Future<File> fetchToCache(DocFile file, {bool refresh = false}) =>
+      _serialized(() => _fetchToCache(file, refresh));
+
+  Future<T> _serialized<T>(Future<T> Function() body) {
+    final op = _lock.then((_) => body());
     _lock = op.then((_) {}, onError: (_) {});
     return op;
   }
 
-  Future<String?> _run(DocFile file, void Function(double)? onProgress) async {
-    await _lock; // serialize with any in-flight download
+  Future<File> _fetchToCache(DocFile file, bool refresh) async {
+    final root = await getTemporaryDirectory();
+    // One folder per client so two clients' same-named files never overwrite each other.
+    final dir = Directory('${root.path}${Platform.pathSeparator}files'
+        '${Platform.pathSeparator}${file.clientId}');
+    final out = File('${dir.path}${Platform.pathSeparator}${file.fileName}');
+    if (!refresh && await out.exists() && await out.length() > 0) return out;
+    await dir.create(recursive: true);
 
-    _configureNotifications();
-    // Best-effort: ask for the notification permission (Android 13+).
+    await _selectClient(file);
+    final part = File('${out.path}.part');
     try {
-      await FileDownloader().permissions.request(PermissionType.notifications);
-    } catch (_) {}
+      final r = await _api.dio.download(
+        _api.url('/app/client_files_action.php'),
+        part.path,
+        queryParameters: {'action': 'download', 'p': file.rel},
+        options: Options(
+          receiveTimeout: AppConfig.downloadTimeout,
+          validateStatus: (s) => s != null && s < 500 && s != 404 && s != 403,
+        ),
+      );
+      final type = r.headers.value(Headers.contentTypeHeader) ?? '';
+      // The endpoint answers a lost session with the HTML login page, not an error status.
+      if (type.contains('text/html') && !file.fileName.toLowerCase().endsWith('.html')) {
+        throw DownloadException('Your session expired. Please sign in again.');
+      }
+      return await part.rename(out.path);
+    } on DioException catch (e) {
+      switch (e.response?.statusCode) {
+        case 403:
+          throw DownloadException('You do not have download access.');
+        case 404:
+          throw DownloadException('File not found on the host.');
+        case 503:
+          throw DownloadException('The file host (main PC) is offline.');
+      }
+      throw DownloadException(_dioMessage(e));
+    } finally {
+      if (await part.exists()) await part.delete();
+    }
+  }
 
-    // Step 1: set cf_client_id in the session (the endpoint reads it from there).
+  /// Step 1 of every fetch: set cf_client_id in the session (the endpoint reads it from there).
+  Future<void> _selectClient(DocFile file) async {
     try {
       await _api.dio.get(
         _api.url('/app/client_files.php'),
@@ -56,6 +102,16 @@ class DownloadRepository {
     } on DioException catch (e) {
       throw DownloadException(_dioMessage(e));
     }
+  }
+
+  Future<String?> _run(DocFile file, void Function(double)? onProgress) async {
+    _configureNotifications();
+    // Best-effort: ask for the notification permission (Android 13+).
+    try {
+      await FileDownloader().permissions.request(PermissionType.notifications);
+    } catch (_) {}
+
+    await _selectClient(file);
 
     final uri = Uri.parse(_api.url('/app/client_files_action.php')).replace(
       queryParameters: {'action': 'download', 'p': file.rel},

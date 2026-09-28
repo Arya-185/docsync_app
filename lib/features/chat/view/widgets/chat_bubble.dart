@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/design/tokens.dart';
 import '../../../../shared/models/citation.dart';
+import '../../../../shared/widgets/file_card.dart';
 import '../../../clients/controller/client_directory.dart';
 import '../../../files/view/file_actions_sheet.dart';
 import '../../controller/chat_controller.dart';
@@ -20,26 +22,31 @@ class ChatBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final isUser = message.isUser;
     final scheme = Theme.of(context).colorScheme;
-    final bg = isUser ? scheme.primary : Colors.white;
-    final fg = isUser ? scheme.onPrimary : scheme.onSurface;
+    final fg = isUser ? Colors.white : scheme.onSurface;
+    // The best source as a full card (Download / Preview / Share), the rest as chips.
+    final cites = message.citations;
 
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+        margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 12),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.82,
+          maxWidth: MediaQuery.of(context).size.width * (isUser ? 0.8 : 0.9),
         ),
         decoration: BoxDecoration(
-          color: bg,
+          color: isUser ? null : Colors.white,
+          gradient: isUser
+              ? const LinearGradient(colors: [Ds.blue, Ds.indigo])
+              : null,
           borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(isUser ? 16 : 4),
-            bottomRight: Radius.circular(isUser ? 4 : 16),
+            topLeft: const Radius.circular(Ds.rCard),
+            topRight: const Radius.circular(Ds.rCard),
+            bottomLeft: Radius.circular(isUser ? Ds.rCard : 6),
+            bottomRight: Radius.circular(isUser ? 6 : Ds.rCard),
           ),
-          border: isUser ? null : Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+          border: isUser ? null : Border.all(color: Ds.line.withValues(alpha: 0.7)),
+          boxShadow: isUser ? null : Ds.cardShadow,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -49,19 +56,27 @@ class ChatBubble extends StatelessWidget {
               const SizedBox(height: 8),
             ],
             _AssistantBody(message: message, foreground: fg),
-            if (message.citations.isNotEmpty) ...[
-              const SizedBox(height: 10),
+            if (cites.isNotEmpty) ...[
+              const SizedBox(height: 12),
               Text('Sources',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: fg.withValues(alpha: 0.7))),
-              const SizedBox(height: 4),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  for (final c in message.citations) _CitationChip(citation: c),
-                ],
+              const SizedBox(height: 6),
+              FileCard(
+                file: cites.first.toDocFile(),
+                snippet: cites.first.snippet,
+                flat: true,
               ),
+              if (cites.length > 1) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final c in cites.skip(1)) _CitationChip(citation: c),
+                  ],
+                ),
+              ],
             ],
           ],
         ),
@@ -95,6 +110,11 @@ class _AssistantBodyState extends ConsumerState<_AssistantBody> {
   String _note = '';
   bool _noteIsError = false;
 
+  /// A commit is in flight, or already succeeded. genui keeps the Confirm button pressable after
+  /// a tap, so without this a second tap — or an impatient double tap — POSTs the same write twice.
+  bool _committing = false;
+  bool _committed = false;
+
   void _setNote(String text, {bool error = false}) {
     if (!mounted) return;
     setState(() {
@@ -108,12 +128,18 @@ class _AssistantBodyState extends ConsumerState<_AssistantBody> {
       case SendChat(:final text):
         // The whole contract for these widgets: the answer goes back as an ordinary chat turn.
         _setNote('');
-        await ref.read(chatControllerProvider.notifier).send(text);
+        final sent = await ref.read(chatControllerProvider.notifier).send(text);
+        // Refused because an answer is still running: say so rather than ignore the tap.
+        if (!sent) _setNote('Still answering — wait for it, or tap Stop first.', error: true);
       case CommitWrite(action: final name, :final args):
+        if (_committing || _committed) return;
+        _committing = true;
         _setNote('Working…');
         final conv = ref.read(chatControllerProvider).conversationId;
         final res =
             await ref.read(chatRepositoryProvider).commit(name, args, conv: conv);
+        _committing = false;
+        _committed = res.ok; // a failure leaves the button usable for a retry
         _setNote(res.message, error: !res.ok);
       case CancelWrite():
         _setNote('Cancelled.');

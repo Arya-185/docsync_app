@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/design/tokens.dart';
 import '../../model/chat_models.dart';
 
 /// The activity trail: what the assistant is doing, line by line, while it does it.
@@ -58,15 +59,16 @@ class _ActivityTrailState extends State<ActivityTrail> {
     if (steps.isEmpty) return const SizedBox.shrink();
 
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final muted = scheme.onSurface.withValues(alpha: 0.6);
+    const muted = Ds.muted;
     final n = steps.length;
     final elapsed = widget.elapsed > 0
         ? ' · ${widget.elapsed.toStringAsFixed(1)}s'
         : '';
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+      decoration: Ds.card(radius: Ds.rChip + 2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -98,7 +100,7 @@ class _ActivityTrailState extends State<ActivityTrail> {
             ConstrainedBox(
               // The trail must never grow tall enough to squeeze the answer or the
               // input bar off a phone screen.
-              constraints: const BoxConstraints(maxHeight: 140),
+              constraints: const BoxConstraints(maxHeight: 168),
               child: SingleChildScrollView(
                 reverse: !widget.done, // keep the newest line in view while running
                 child: Column(
@@ -114,6 +116,20 @@ class _ActivityTrailState extends State<ActivityTrail> {
   }
 }
 
+class _Dot extends StatelessWidget {
+  const _Dot({required this.color, required this.child});
+  final Color color;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 18,
+        height: 18,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        child: Center(child: child),
+      );
+}
+
 class _StepLine extends StatelessWidget {
   const _StepLine({required this.step});
   final ChatStep step;
@@ -121,38 +137,42 @@ class _StepLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
     final failed = step.failed;
-    final color = failed
-        ? scheme.error
-        : scheme.onSurface.withValues(alpha: step.done ? 0.55 : 0.85);
+    final color = failed ? Ds.red : (step.done ? Ds.inkSoft : Ds.ink);
 
     final Widget icon;
     if (failed) {
-      icon = Icon(Icons.error_outline, size: 14, color: scheme.error);
+      icon = const _Dot(color: Ds.red, child: Icon(Icons.close, size: 11, color: Colors.white));
     } else if (step.done) {
-      icon = Icon(Icons.check, size: 14, color: color);
+      icon = const _Dot(color: Ds.green, child: Icon(Icons.check, size: 11, color: Colors.white));
     } else {
-      icon = SizedBox(
-        width: 12,
-        height: 12,
-        child: CircularProgressIndicator(strokeWidth: 1.8, color: color),
+      icon = const SizedBox(
+        width: 16,
+        height: 16,
+        child: CircularProgressIndicator(strokeWidth: 2, color: Ds.blue),
       );
     }
+    final secs = step.seconds;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 1.5),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 16, child: Center(child: icon)),
-          const SizedBox(width: 6),
+          SizedBox(width: 18, child: Center(child: icon)),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               step.label,
-              style: theme.textTheme.bodySmall?.copyWith(color: color),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: color,
+                fontWeight: step.done ? FontWeight.w400 : FontWeight.w500,
+              ),
             ),
           ),
+          // An instant step says nothing useful as "0.0s".
+          if (secs != null && step.done && secs >= 0.1)
+            Text('${secs.toStringAsFixed(1)}s',
+                style: theme.textTheme.labelSmall?.copyWith(color: Ds.muted)),
         ],
       ),
     );

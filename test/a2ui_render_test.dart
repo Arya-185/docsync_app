@@ -57,6 +57,8 @@ void main() {
       'list_long',
       'list_no_ids',
       'choice',
+      'undo',
+      'next_steps',
     };
     final present = fixtures.keys.toSet();
     expect(expected.difference(present), isEmpty,
@@ -226,6 +228,26 @@ void main() {
       await tester.tap(find.text('Use this'));
       await tester.pumpAndSettle();
       expect(actions.single, const ActionFailed('Nothing was selected.'));
+    });
+  });
+
+  /* Both are one-tap chips the server attaches AFTER a write: they carry the whole reply in
+     their context, so a tap must send it verbatim — the same sentence the web sends
+     (a2ui-docsync.js), or the agent sees two spellings of one request. */
+  group('the after-a-write chips', () {
+    testWidgets('undo sends the undo sentence', (tester) async {
+      final actions = await pump(tester, 'undo');
+      await tester.tap(find.text('Undo — remove this to-do'));
+      await tester.pumpAndSettle();
+      expect(actions.single, const SendChat('Use undo: to-do #77.'));
+    });
+
+    testWidgets('each next step sends its own sentence', (tester) async {
+      final actions = await pump(tester, 'next_steps');
+      expect(find.text('Email it to the client'), findsOneWidget);
+      await tester.tap(find.text('Mark it paid'));
+      await tester.pumpAndSettle();
+      expect(actions.single, const SendChat('Use next: mark invoice #65 paid.'));
     });
   });
 

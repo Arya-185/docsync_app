@@ -108,6 +108,8 @@ class AuthController extends Notifier<AuthState> {
   /// Reset all user-scoped in-memory state to its initial value. Cheap: an
   /// invalidated provider only rebuilds if something is currently watching it.
   void _resetUserScopedState() {
+    // Drop a turn still streaming for the previous account before its controller goes away.
+    ref.read(chatControllerProvider.notifier).cancelActive();
     ref.invalidate(chatControllerProvider);
     ref.invalidate(chatHistoryProvider);
     ref.invalidate(clientDirectoryProvider);

@@ -4,6 +4,7 @@
 // the REAL ChatController — the pairing logic under test lives there, not in a
 // widget, so there is no point testing a reimplementation of it.
 
+import 'package:dio/dio.dart';
 import 'package:docsync_app/features/chat/model/chat_models.dart';
 import 'package:docsync_app/features/chat/model/chat_repository.dart';
 
@@ -19,9 +20,20 @@ class ScriptedChatRepository implements ChatRepository {
   /// The queries [answerStream] was asked for, in order.
   final List<String> asked = [];
 
+  /// The (voice, lang) each [answerStream] call was made with, in order.
+  final List<({bool voice, String? lang})> voiceFlags = [];
+
   @override
-  Stream<RagEvent> answerStream(String query, {int conv = 0, int k = 10}) async* {
+  Stream<RagEvent> answerStream(
+    String query, {
+    int conv = 0,
+    int k = 10,
+    bool voice = false,
+    String? lang,
+    CancelToken? cancel,
+  }) async* {
     asked.add(query);
+    voiceFlags.add((voice: voice, lang: lang));
     for (final j in script) {
       final ev = RagEvent.fromJson(j);
       yield ev;
@@ -50,8 +62,18 @@ class ScriptedChatRepository implements ChatRepository {
   /* A resumed turn replays the SAME events as a live one, which is the property worth testing:
      if the fold behaves differently on the two paths, a followed turn renders differently from
      the one that produced it, and nobody would see that until two devices disagreed. */
+  /// Conversations [stop] was called for, in order.
+  final List<int> stopped = [];
+
   @override
-  Stream<RagEvent> followStream(int conv, {int after = 0}) async* {
+  Future<bool> stop(int conv) async {
+    if (conv <= 0) return false;
+    stopped.add(conv);
+    return true;
+  }
+
+  @override
+  Stream<RagEvent> followStream(int conv, {int after = 0, CancelToken? cancel}) async* {
     followed.add(conv);
     if (!hasLiveTurn) return;
     for (final j in script) {

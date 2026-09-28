@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/models/doc_file.dart';
 import '../../clients/controller/client_directory.dart';
 import '../controller/download_controller.dart';
+import '../controller/file_open_controller.dart';
 
 /// Show the file actions sheet (details + download) for a document.
 void showFileActions(
@@ -85,6 +86,8 @@ class _FileActionsSheet extends ConsumerWidget {
           ],
           const SizedBox(height: 20),
           _actionArea(context, theme, dl, ctrl),
+          const SizedBox(height: 10),
+          _openRow(context, ref),
         ],
       ),
     );
@@ -195,6 +198,45 @@ class _FileActionsSheet extends ConsumerWidget {
           ),
         );
     }
+  }
+
+  /// Preview and Share work from a private cached copy, so they never depend on the
+  /// public download having happened.
+  Widget _openRow(BuildContext context, WidgetRef ref) {
+    final busy = ref.watch(fileOpenControllerProvider.select((m) => m[file.key]));
+    final open = ref.read(fileOpenControllerProvider.notifier);
+
+    Future<void> run(Future<String?> Function() op) async {
+      final err = await op();
+      if (err != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+      }
+    }
+
+    Widget button(FileOp op, IconData icon, String label, Future<String?> Function() fn) {
+      return Expanded(
+        child: SizedBox(
+          height: 48,
+          child: OutlinedButton.icon(
+            onPressed: busy != null ? null : () => run(fn),
+            icon: busy == op
+                ? const SizedBox(
+                    width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                : Icon(icon, size: 18),
+            label: Text(label),
+          ),
+        ),
+      );
+    }
+
+    return Row(
+      children: [
+        button(FileOp.preview, Icons.visibility_outlined, 'Preview',
+            () => open.preview(file)),
+        const SizedBox(width: 10),
+        button(FileOp.share, Icons.ios_share_rounded, 'Share', () => open.share(file)),
+      ],
+    );
   }
 
   Widget _row(ThemeData theme, IconData icon, String text) => Row(

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/design/tokens.dart';
 import '../../../shared/widgets/mic_button.dart';
 import '../controller/chat_controller.dart';
 import 'widgets/activity_trail.dart';
 import 'widgets/chat_bubble.dart';
-import 'widgets/history_sheet.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
@@ -14,15 +14,33 @@ class ChatScreen extends ConsumerStatefulWidget {
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends ConsumerState<ChatScreen> {
+class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObserver {
   final _input = TextEditingController();
   final _scroll = ScrollController();
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _input.dispose();
     _scroll.dispose();
     super.dispose();
+  }
+
+  /* A turn keeps running on the server while the phone is locked or the app is in the
+     background, and Android may drop the socket meanwhile. Coming back picks it up —
+     the answer that landed, or the turn still in progress — instead of leaving a question
+     with nothing under it until the chat is reopened by hand. */
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState s) {
+    if (s == AppLifecycleState.resumed) {
+      ref.read(chatControllerProvider.notifier).resync();
+    }
   }
 
   void _scrollToEnd() {
@@ -40,6 +58,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   void _send([String? preset]) {
     final text = preset ?? _input.text;
     if (text.trim().isEmpty) return;
+    if (ref.read(chatControllerProvider).sending) {
+      // Keep what they typed; say why nothing happened instead of dropping the tap.
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Still answering — tap Stop to interrupt.'),
+      ));
+      return;
+    }
     FocusScope.of(context).unfocus();
     _input.clear();
     ref.read(chatControllerProvider.notifier).send(text);
@@ -76,25 +101,20 @@ class _ChatHeader extends ConsumerWidget {
     final sending = ref.watch(chatControllerProvider.select((s) => s.sending));
     final hasMessages =
         ref.watch(chatControllerProvider.select((s) => s.messages.isNotEmpty));
+    if (!hasMessages) return const SizedBox(height: 4);
 
     return Padding(
-      padding: const EdgeInsets.only(left: 8, right: 8, top: 4),
+      padding: const EdgeInsets.only(left: 8, right: 8),
       child: Row(
         children: [
-          TextButton.icon(
-            onPressed: sending ? null : () => showChatHistory(context),
-            icon: const Icon(Icons.history, size: 18),
-            label: const Text('History'),
-          ),
           const Spacer(),
-          if (hasMessages)
-            TextButton.icon(
-              onPressed: sending
-                  ? null
-                  : () => ref.read(chatControllerProvider.notifier).newChat(),
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('New chat'),
-            ),
+          TextButton.icon(
+            onPressed: sending
+                ? null
+                : () => ref.read(chatControllerProvider.notifier).newChat(),
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('New chat'),
+          ),
         ],
       ),
     );
@@ -146,8 +166,15 @@ class _InputSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sending = ref.watch(chatControllerProvider.select((s) => s.sending));
-    return _InputBar(controller: controller, sending: sending, onSend: onSend);
+    final busy = ref.watch(
+        chatControllerProvider.select((s) => (sending: s.sending, stopping: s.stopping)));
+    return _InputBar(
+      controller: controller,
+      sending: busy.sending,
+      stopping: busy.stopping,
+      onSend: onSend,
+      onStop: () => ref.read(chatControllerProvider.notifier).stop(),
+    );
   }
 }
 
@@ -165,31 +192,51 @@ class _EmptyState extends StatelessWidget {
     final theme = Theme.of(context);
     return Center(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(Ds.s6),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.auto_awesome, size: 44, color: theme.colorScheme.primary),
-            const SizedBox(height: 12),
-            Text('Ask about your documents',
-                style: theme.textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w600)),
+            Container(
+              width: 64,
+              height: 64,
+              decoration: const BoxDecoration(
+                gradient: Ds.orbGradient,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.auto_awesome, size: 30, color: Colors.white),
+            ),
+            const SizedBox(height: Ds.s4),
+            Text('Ask about your clients', style: theme.textTheme.titleLarge),
             const SizedBox(height: 6),
-            Text('Type a question or tap the mic to speak.',
+            Text('Documents, tasks, invoices, reminders — type or tap the mic.',
                 textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium
-                    ?.copyWith(color: theme.colorScheme.outline)),
-            const SizedBox(height: 20),
+                style: theme.textTheme.bodyMedium?.copyWith(color: Ds.muted)),
+            const SizedBox(height: Ds.s6),
             for (final e in examples)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(vertical: 5),
+                child: Material(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(Ds.rChip),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(Ds.rChip),
+                    onTap: () => onExample(e),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(Ds.rChip),
+                        border: Border.all(color: Ds.line),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.north_east_rounded, size: 16, color: Ds.blue),
+                          const SizedBox(width: 10),
+                          Expanded(child: Text(e, style: theme.textTheme.bodyMedium)),
+                        ],
+                      ),
+                    ),
                   ),
-                  onPressed: () => onExample(e),
-                  child: Text(e, textAlign: TextAlign.center),
                 ),
               ),
           ],
@@ -203,63 +250,75 @@ class _InputBar extends StatelessWidget {
   const _InputBar({
     required this.controller,
     required this.sending,
+    required this.stopping,
     required this.onSend,
+    required this.onStop,
   });
 
   final TextEditingController controller;
   final bool sending;
+  final bool stopping;
   final void Function([String?]) onSend;
+  final VoidCallback onStop;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      elevation: 2,
-      color: Theme.of(context).colorScheme.surface,
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              MicButton(controller: controller, filled: true, enabled: !sending),
-              const SizedBox(width: 6),
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  minLines: 1,
-                  maxLines: 5,
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: (_) => onSend(),
-                  decoration: InputDecoration(
-                    hintText: 'Ask a question…',
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      borderSide: BorderSide.none,
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
+    return SafeArea(
+      top: false,
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(12, 4, 12, 10),
+        padding: const EdgeInsets.fromLTRB(6, 4, 6, 4),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(Ds.rPill),
+          boxShadow: Ds.pillShadow,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            MicButton(controller: controller, enabled: !sending),
+            Expanded(
+              child: TextField(
+                controller: controller,
+                minLines: 1,
+                maxLines: 5,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => onSend(),
+                decoration: const InputDecoration(
+                  hintText: 'Ask anything about your clients…',
+                  filled: false,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 12),
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
                 ),
               ),
-              const SizedBox(width: 6),
+            ),
+            const SizedBox(width: 4),
+            /* While a turn runs the send button IS the stop button: the one place the thumb
+               already is. "Stopping…" covers the gap until the agent reaches its next check. */
+            if (sending)
+              Tooltip(
+                message: stopping ? 'Stopping…' : 'Stop',
+                child: IconButton.filled(
+                  style: IconButton.styleFrom(backgroundColor: Ds.ink),
+                  onPressed: stopping ? null : onStop,
+                  icon: stopping
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.stop_rounded, color: Colors.white),
+                ),
+              )
+            else
               IconButton.filled(
-                onPressed: sending ? null : () => onSend(),
-                icon: sending
-                    ? const SizedBox(
-                        height: 18,
-                        width: 18,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Icon(Icons.send),
+                style: IconButton.styleFrom(backgroundColor: Ds.blue),
+                onPressed: () => onSend(),
+                icon: const Icon(Icons.arrow_upward_rounded, color: Colors.white),
               ),
-            ],
-          ),
+          ],
         ),
       ),
     );

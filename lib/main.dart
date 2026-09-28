@@ -7,7 +7,7 @@ import 'core/providers.dart';
 import 'core/theme.dart';
 import 'features/auth/controller/auth_controller.dart';
 import 'features/auth/view/login_screen.dart';
-import 'features/home/view/home_screen.dart';
+import 'features/home/view/app_shell.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,7 +49,7 @@ class _DocSyncAppState extends ConsumerState<DocSyncApp> {
       title: 'DocSync AI',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
-      home: authed ? const HomeScreen() : const LoginScreen(),
+      home: authed ? const AppShell() : const LoginScreen(),
     );
   }
 }

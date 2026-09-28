@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../features/settings/controller/settings_controller.dart';
 import '../services/voice_service.dart';
 
 /// A mic button that dictates into [controller] using on-device speech-to-text.
@@ -34,6 +35,7 @@ class _MicButtonState extends ConsumerState<MicButton> {
       return;
     }
     final ok = await voice.start(
+      localeId: ref.read(settingsControllerProvider).voiceLang.localeId,
       onResult: (text, isFinal) {
         if (!mounted) return;
         widget.controller.text = text;

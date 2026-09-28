@@ -17,10 +17,14 @@ class VoiceService {
   }
 
   /// Start listening. [onResult] fires with partial + final transcripts;
-  /// [onDone] fires when recognition stops.
+  /// [onDone] fires when recognition stops. [onLevel] reports the input level
+  /// (roughly -2..10 dB) for a live mic animation. [localeId] (e.g. `hi_IN`)
+  /// picks the recognition language; null uses the phone's default.
   Future<bool> start({
     required void Function(String text, bool isFinal) onResult,
     void Function()? onDone,
+    void Function(double level)? onLevel,
+    String? localeId,
   }) async {
     if (!await ensureReady()) return false;
     _stt.statusListener = (status) {
@@ -28,7 +32,9 @@ class VoiceService {
     };
     await _stt.listen(
       onResult: (r) => onResult(r.recognizedWords, r.finalResult),
+      onSoundLevelChange: onLevel,
       listenOptions: SpeechListenOptions(
+        localeId: localeId,
         listenMode: ListenMode.dictation,
         partialResults: true,
         cancelOnError: true,

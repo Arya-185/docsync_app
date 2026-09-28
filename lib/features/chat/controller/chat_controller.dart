@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/config.dart';
@@ -27,7 +28,46 @@ class ChatController extends Notifier<ChatState> {
 
   ChatRepository get _repo => ref.read(chatRepositoryProvider);
 
+  /// Cancels the HTTP stream of the turn on screen. Only used to abandon it locally (sign-out):
+  /// the turn itself lives on the server and carries on — Stop is [stop], not this.
+  CancelToken? _cancel;
+
+  /// Stop was pressed before the server said which conversation this is (a brand-new chat's
+  /// first seconds). Sent the moment the `conversation` event arrives.
+  bool _stopRequested = false;
+
   void newChat() => state = const ChatState();
+
+  /// Ask the server to stop the running turn. The stream keeps going until the agent reaches its
+  /// next check and ends with `final.stopped`, so [ChatState.stopping] covers that gap.
+  Future<void> stop() async {
+    if (!state.sending || state.stopping) return;
+    state = state.copyWith(stopping: true);
+    final id = state.conversationId;
+    if (id > 0) {
+      await _repo.stop(id);
+    } else {
+      _stopRequested = true;
+    }
+  }
+
+  /// Drop the turn on screen without stopping it server-side — for sign-out, where the next
+  /// account must not receive this one's events.
+  void cancelActive() => _cancel?.cancel('abandoned');
+
+  /// Catch up after the app was in the background: an answer may have landed, or still be
+  /// running, while nothing was listening. Unlike [openConversation] this keeps the transcript on
+  /// screen instead of blanking it first.
+  Future<void> resync() async {
+    final id = state.conversationId;
+    if (id <= 0 || state.sending) return;
+    final msgs = await _repo.conversationMessages(id);
+    if (!ref.mounted || state.sending || state.conversationId != id) return;
+    if (msgs.isNotEmpty && msgs.length >= state.messages.length) {
+      state = state.copyWith(messages: msgs);
+    }
+    unawaited(follow(id));
+  }
 
   /// Load a saved conversation's messages into the chat view.
   Future<void> openConversation(int id) async {
@@ -47,15 +87,21 @@ class ChatController extends Notifier<ChatState> {
     unawaited(follow(id));
   }
 
-  Future<void> send(String query) async {
+  /// Ask a question. Returns false when it was NOT sent — empty, or another answer is still
+  /// running — so the caller can say so instead of the tap silently doing nothing.
+  ///
+  /// [voice] asks for a reply meant to be spoken; [lang] is the language the user spoke.
+  Future<bool> send(String query, {bool voice = false, String? lang}) async {
     final q = query.trim();
-    if (q.isEmpty || state.sending) return;
+    if (q.isEmpty || state.sending) return false;
     await _runTurn(
-      open: () => _repo.answerStream(q, conv: state.conversationId),
+      open: (cancel) => _repo.answerStream(q,
+          conv: state.conversationId, voice: voice, lang: lang, cancel: cancel),
       question: q,
       openingLabel: 'Sending your question',
       openedLabel: 'Sent your question',
     );
+    return true;
   }
 
   /// Attach to a turn that is already running on this conversation.
@@ -70,7 +116,7 @@ class ChatController extends Notifier<ChatState> {
   Future<void> follow(int conv) async {
     if (conv <= 0 || state.sending) return;
     await _runTurn(
-      open: () => _repo.followStream(conv),
+      open: (cancel) => _repo.followStream(conv, cancel: cancel),
       question: null,
       openingLabel: 'Picking up where this answer got to',
       openedLabel: 'Picked up this answer',
@@ -82,11 +128,14 @@ class ChatController extends Notifier<ChatState> {
   /// [question] is null when joining: there is no user message to append, because the question
   /// is already in the transcript we just loaded.
   Future<void> _runTurn({
-    required Stream<RagEvent> Function() open,
+    required Stream<RagEvent> Function(CancelToken cancel) open,
     required String? question,
     required String openingLabel,
     required String openedLabel,
   }) async {
+    final cancel = CancelToken();
+    _cancel = cancel;
+    _stopRequested = false;
     final msgs = [
       ...state.messages,
       if (question != null) ChatMessage(role: 'user', content: question),
@@ -95,7 +144,7 @@ class ChatController extends Notifier<ChatState> {
     /* The trail opens BEFORE the server has said anything: the request itself can
        take a moment, and an empty bubble is the thing it exists to get rid of. */
     final trail = <ChatStep>[
-      ChatStep(seq: ChatStep.sentSeq, label: openingLabel),
+      ChatStep(seq: ChatStep.sentSeq, label: openingLabel, startedAt: DateTime.now()),
     ];
     var trailDone = false;
     var started = false;
@@ -109,7 +158,7 @@ class ChatController extends Notifier<ChatState> {
        the user looked at. So following waits for the first real event before touching anything,
        and if none arrives this method is a no-op the user never sees. */
     void begin() {
-      if (started) return;
+      if (started || !ref.mounted) return;
       started = true;
       state = ChatState(
         messages: msgs,
@@ -128,7 +177,10 @@ class ChatController extends Notifier<ChatState> {
     final superseded = <String>[];
     List<Citation> citations = const [];
 
+    /* Every write below is guarded by ref.mounted: signing out invalidates this provider while a
+       turn may still be streaming, and a disposed notifier must not be written to. */
     void pushTrail({bool? done, double? elapsed}) {
+      if (!ref.mounted) return;
       state = state.copyWith(
         trail: List.of(trail),
         trailDone: done,
@@ -171,6 +223,7 @@ class ChatController extends Notifier<ChatState> {
       ConfirmProposal? confirm,
       List<String>? superseded,
     }) {
+      if (!ref.mounted) return;
       final list = [...state.messages];
       final idx = list.length - 1;
       list[idx] = list[idx].copyWith(
@@ -186,11 +239,16 @@ class ChatController extends Notifier<ChatState> {
     }
 
     try {
-      await for (final ev in open()) {
+      await for (final ev in open(cancel)) {
+        if (!ref.mounted) break;
         begin();
         switch (ev.type) {
           case RagEventType.conversation:
             state = state.copyWith(conversationId: ev.conversationId ?? state.conversationId);
+            if (_stopRequested && state.conversationId > 0) {
+              _stopRequested = false;
+              unawaited(_repo.stop(state.conversationId));
+            }
             break;
           case RagEventType.token:
             answer += ev.text ?? '';
@@ -212,6 +270,7 @@ class ChatController extends Notifier<ChatState> {
               seq: ev.seq,
               label: (ev.label ?? '').isNotEmpty ? ev.label! : 'Working',
               transient: ev.transient,
+              startedAt: DateTime.now(),
             ));
             pushTrail();
             break;
@@ -252,6 +311,9 @@ class ChatController extends Notifier<ChatState> {
             if ((ev.answer ?? '').isNotEmpty) {
               answer = ev.answer!;
               sawAnswerText = true;
+            } else if (ev.stopped && answer.isEmpty) {
+              answer = 'Stopped.';
+              sawAnswerText = true;
             }
             citations = _consolidateCitations(ev.citations);
             updateAssistant(content: answer, cites: citations);
@@ -278,16 +340,19 @@ class ChatController extends Notifier<ChatState> {
         }
       }
     } catch (e) {
-      if (answer.isEmpty) {
+      // Abandoned on purpose (sign-out): the turn carries on server-side; say nothing here.
+      final abandoned = e is DioException && CancelToken.isCancel(e);
+      if (answer.isEmpty && !abandoned) {
         answer = 'Something went wrong: $e';
         sawAnswerText = true;
         updateAssistant(content: answer);
       }
     } finally {
+      if (identical(_cancel, cancel)) _cancel = null;
       /* Guarded rather than returned out of: a `return` in a finally swallows whatever
          exception was on its way out. `started` is false only when a FOLLOWED turn found
          nothing running, in which case the transcript is left exactly as it was found. */
-      if (started) {
+      if (started && ref.mounted) {
         /* "(no answer)" used to run unconditionally, so a confirm-only turn — which
            legitimately produces no prose at all — printed those literal words under
            the confirmation card. Only say it when the turn really said nothing AND
@@ -303,7 +368,7 @@ class ChatController extends Notifier<ChatState> {
           streaming: false,
         );
         finishTrail();
-        state = state.copyWith(status: ChatStatus.idle, step: '');
+        state = state.copyWith(status: ChatStatus.idle, step: '', stopping: false);
 
         // Resolve client names for any citation chips.
         if (citations.isNotEmpty) {
