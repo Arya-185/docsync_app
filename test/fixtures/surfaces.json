@@ -1,0 +1,1486 @@
+{
+    "picker": [
+        {
+            "version": "v0.9",
+            "createSurface": {
+                "surfaceId": "pick_client_12a97d4a",
+                "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
+            }
+        },
+        {
+            "version": "v0.9",
+            "updateComponents": {
+                "surfaceId": "pick_client_12a97d4a",
+                "components": [
+                    {
+                        "id": "root",
+                        "component": "Column",
+                        "children": [
+                            "q",
+                            "picker",
+                            "submit"
+                        ]
+                    },
+                    {
+                        "id": "q",
+                        "component": "Text",
+                        "text": "Which Acme did you mean?"
+                    },
+                    {
+                        "id": "picker",
+                        "component": "ChoicePicker",
+                        "variant": "mutuallyExclusive",
+                        "displayStyle": "checkbox",
+                        "options": [
+                            {
+                                "label": "Acme Traders — file_no 1201",
+                                "value": "2144|Acme Traders"
+                            },
+                            {
+                                "label": "Acme Exports",
+                                "value": "2145|Acme Exports"
+                            },
+                            {
+                                "label": "Acme Holdings — Retail group",
+                                "value": "2146|Acme Holdings"
+                            }
+                        ],
+                        "value": {
+                            "path": "/choice"
+                        }
+                    },
+                    {
+                        "id": "submit",
+                        "component": "Button",
+                        "variant": "primary",
+                        "child": "submit_label",
+                        "action": {
+                            "event": {
+                                "name": "docsync.pick",
+                                "context": {
+                                    "kind": "client",
+                                    "choice": {
+                                        "path": "/choice"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "submit_label",
+                        "component": "Text",
+                        "text": "Use this one"
+                    }
+                ]
+            }
+        },
+        {
+            "version": "v0.9",
+            "updateDataModel": {
+                "surfaceId": "pick_client_12a97d4a",
+                "value": {
+                    "choice": []
+                }
+            }
+        }
+    ],
+    "confirm": [
+        {
+            "version": "v0.9",
+            "createSurface": {
+                "surfaceId": "confirm_set_task_status",
+                "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
+            }
+        },
+        {
+            "version": "v0.9",
+            "updateComponents": {
+                "surfaceId": "confirm_set_task_status",
+                "components": [
+                    {
+                        "id": "root",
+                        "component": "Column",
+                        "children": [
+                            "title",
+                            "summary",
+                            "warn0",
+                            "buttons"
+                        ]
+                    },
+                    {
+                        "id": "title",
+                        "component": "Text",
+                        "text": "Please confirm"
+                    },
+                    {
+                        "id": "summary",
+                        "component": "Text",
+                        "text": "Move task #581 to completed."
+                    },
+                    {
+                        "id": "warn0",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "This notifies the person who allotted it."
+                    },
+                    {
+                        "id": "buttons",
+                        "component": "Row",
+                        "children": [
+                            "yes",
+                            "no"
+                        ]
+                    },
+                    {
+                        "id": "yes",
+                        "component": "Button",
+                        "variant": "primary",
+                        "child": "yes_label",
+                        "action": {
+                            "event": {
+                                "name": "docsync.commit",
+                                "context": {
+                                    "action": "set_task_status",
+                                    "args": "{\"task_creation_id\":581,\"status\":\"completed\",\"remark\":\"done\"}"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "yes_label",
+                        "component": "Text",
+                        "text": "Confirm"
+                    },
+                    {
+                        "id": "no",
+                        "component": "Button",
+                        "child": "no_label",
+                        "action": {
+                            "event": {
+                                "name": "docsync.cancel",
+                                "context": {
+                                    "action": "set_task_status"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "no_label",
+                        "component": "Text",
+                        "text": "Cancel"
+                    }
+                ]
+            }
+        }
+    ],
+    "confirm_no_warnings": [
+        {
+            "version": "v0.9",
+            "createSurface": {
+                "surfaceId": "confirm_add_todo",
+                "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
+            }
+        },
+        {
+            "version": "v0.9",
+            "updateComponents": {
+                "surfaceId": "confirm_add_todo",
+                "components": [
+                    {
+                        "id": "root",
+                        "component": "Column",
+                        "children": [
+                            "title",
+                            "summary",
+                            "buttons"
+                        ]
+                    },
+                    {
+                        "id": "title",
+                        "component": "Text",
+                        "text": "Please confirm"
+                    },
+                    {
+                        "id": "summary",
+                        "component": "Text",
+                        "text": "Add a to-do."
+                    },
+                    {
+                        "id": "buttons",
+                        "component": "Row",
+                        "children": [
+                            "yes",
+                            "no"
+                        ]
+                    },
+                    {
+                        "id": "yes",
+                        "component": "Button",
+                        "variant": "primary",
+                        "child": "yes_label",
+                        "action": {
+                            "event": {
+                                "name": "docsync.commit",
+                                "context": {
+                                    "action": "add_todo",
+                                    "args": "{\"title\":\"x\"}"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "yes_label",
+                        "component": "Text",
+                        "text": "Confirm"
+                    },
+                    {
+                        "id": "no",
+                        "component": "Button",
+                        "child": "no_label",
+                        "action": {
+                            "event": {
+                                "name": "docsync.cancel",
+                                "context": {
+                                    "action": "add_todo"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "no_label",
+                        "component": "Text",
+                        "text": "Cancel"
+                    }
+                ]
+            }
+        }
+    ],
+    "date": [
+        {
+            "version": "v0.9",
+            "createSurface": {
+                "surfaceId": "when_6b873d54",
+                "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
+            }
+        },
+        {
+            "version": "v0.9",
+            "updateComponents": {
+                "surfaceId": "when_6b873d54",
+                "components": [
+                    {
+                        "id": "root",
+                        "component": "Column",
+                        "children": [
+                            "q",
+                            "when",
+                            "submit"
+                        ]
+                    },
+                    {
+                        "id": "q",
+                        "component": "Text",
+                        "text": "When should I set the reminder for?"
+                    },
+                    {
+                        "id": "when",
+                        "component": "DateTimeInput",
+                        "label": "Date",
+                        "enableDate": true,
+                        "enableTime": false,
+                        "value": {
+                            "path": "/when"
+                        }
+                    },
+                    {
+                        "id": "submit",
+                        "component": "Button",
+                        "variant": "primary",
+                        "child": "submit_label",
+                        "action": {
+                            "event": {
+                                "name": "docsync.date",
+                                "context": {
+                                    "when": {
+                                        "path": "/when"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "submit_label",
+                        "component": "Text",
+                        "text": "Use this"
+                    }
+                ]
+            }
+        },
+        {
+            "version": "v0.9",
+            "updateDataModel": {
+                "surfaceId": "when_6b873d54",
+                "value": {
+                    "when": ""
+                }
+            }
+        }
+    ],
+    "time": [
+        {
+            "version": "v0.9",
+            "createSurface": {
+                "surfaceId": "when_c48cccca",
+                "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
+            }
+        },
+        {
+            "version": "v0.9",
+            "updateComponents": {
+                "surfaceId": "when_c48cccca",
+                "components": [
+                    {
+                        "id": "root",
+                        "component": "Column",
+                        "children": [
+                            "q",
+                            "when",
+                            "submit"
+                        ]
+                    },
+                    {
+                        "id": "q",
+                        "component": "Text",
+                        "text": "What time?"
+                    },
+                    {
+                        "id": "when",
+                        "component": "DateTimeInput",
+                        "label": "Time",
+                        "enableDate": false,
+                        "enableTime": true,
+                        "value": {
+                            "path": "/when"
+                        }
+                    },
+                    {
+                        "id": "submit",
+                        "component": "Button",
+                        "variant": "primary",
+                        "child": "submit_label",
+                        "action": {
+                            "event": {
+                                "name": "docsync.date",
+                                "context": {
+                                    "when": {
+                                        "path": "/when"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "submit_label",
+                        "component": "Text",
+                        "text": "Use this"
+                    }
+                ]
+            }
+        },
+        {
+            "version": "v0.9",
+            "updateDataModel": {
+                "surfaceId": "when_c48cccca",
+                "value": {
+                    "when": ""
+                }
+            }
+        }
+    ],
+    "datetime": [
+        {
+            "version": "v0.9",
+            "createSurface": {
+                "surfaceId": "when_133eb622",
+                "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
+            }
+        },
+        {
+            "version": "v0.9",
+            "updateComponents": {
+                "surfaceId": "when_133eb622",
+                "components": [
+                    {
+                        "id": "root",
+                        "component": "Column",
+                        "children": [
+                            "q",
+                            "when",
+                            "submit"
+                        ]
+                    },
+                    {
+                        "id": "q",
+                        "component": "Text",
+                        "text": "When?"
+                    },
+                    {
+                        "id": "when",
+                        "component": "DateTimeInput",
+                        "label": "Date and time",
+                        "enableDate": true,
+                        "enableTime": true,
+                        "value": {
+                            "path": "/when"
+                        }
+                    },
+                    {
+                        "id": "submit",
+                        "component": "Button",
+                        "variant": "primary",
+                        "child": "submit_label",
+                        "action": {
+                            "event": {
+                                "name": "docsync.date",
+                                "context": {
+                                    "when": {
+                                        "path": "/when"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "submit_label",
+                        "component": "Text",
+                        "text": "Use this"
+                    }
+                ]
+            }
+        },
+        {
+            "version": "v0.9",
+            "updateDataModel": {
+                "surfaceId": "when_133eb622",
+                "value": {
+                    "when": ""
+                }
+            }
+        }
+    ],
+    "multi": [
+        {
+            "version": "v0.9",
+            "createSurface": {
+                "surfaceId": "many_client_c1f4b95e",
+                "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
+            }
+        },
+        {
+            "version": "v0.9",
+            "updateComponents": {
+                "surfaceId": "many_client_c1f4b95e",
+                "components": [
+                    {
+                        "id": "root",
+                        "component": "Column",
+                        "children": [
+                            "q",
+                            "picker",
+                            "submit"
+                        ]
+                    },
+                    {
+                        "id": "q",
+                        "component": "Text",
+                        "text": "Which clients should I include?"
+                    },
+                    {
+                        "id": "picker",
+                        "component": "ChoicePicker",
+                        "variant": "multipleSelection",
+                        "displayStyle": "checkbox",
+                        "options": [
+                            {
+                                "label": "Acme Traders",
+                                "value": "12|Acme Traders"
+                            },
+                            {
+                                "label": "Beta Exports",
+                                "value": "14|Beta Exports"
+                            },
+                            {
+                                "label": "Gamma Holdings",
+                                "value": "19|Gamma Holdings"
+                            }
+                        ],
+                        "value": {
+                            "path": "/choice"
+                        }
+                    },
+                    {
+                        "id": "submit",
+                        "component": "Button",
+                        "variant": "primary",
+                        "child": "submit_label",
+                        "action": {
+                            "event": {
+                                "name": "docsync.pickMany",
+                                "context": {
+                                    "kind": "client",
+                                    "choice": {
+                                        "path": "/choice"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "submit_label",
+                        "component": "Text",
+                        "text": "Use these"
+                    }
+                ]
+            }
+        },
+        {
+            "version": "v0.9",
+            "updateDataModel": {
+                "surfaceId": "many_client_c1f4b95e",
+                "value": {
+                    "choice": []
+                }
+            }
+        }
+    ],
+    "multi_filterable": [
+        {
+            "version": "v0.9",
+            "createSurface": {
+                "surfaceId": "many_client_087c802d",
+                "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
+            }
+        },
+        {
+            "version": "v0.9",
+            "updateComponents": {
+                "surfaceId": "many_client_087c802d",
+                "components": [
+                    {
+                        "id": "root",
+                        "component": "Column",
+                        "children": [
+                            "q",
+                            "picker",
+                            "submit"
+                        ]
+                    },
+                    {
+                        "id": "q",
+                        "component": "Text",
+                        "text": "Which ones?"
+                    },
+                    {
+                        "id": "picker",
+                        "component": "ChoicePicker",
+                        "variant": "multipleSelection",
+                        "displayStyle": "checkbox",
+                        "options": [
+                            {
+                                "label": "Client number 1",
+                                "value": "1|Client number 1"
+                            },
+                            {
+                                "label": "Client number 2",
+                                "value": "2|Client number 2"
+                            },
+                            {
+                                "label": "Client number 3",
+                                "value": "3|Client number 3"
+                            },
+                            {
+                                "label": "Client number 4",
+                                "value": "4|Client number 4"
+                            },
+                            {
+                                "label": "Client number 5",
+                                "value": "5|Client number 5"
+                            },
+                            {
+                                "label": "Client number 6",
+                                "value": "6|Client number 6"
+                            },
+                            {
+                                "label": "Client number 7",
+                                "value": "7|Client number 7"
+                            },
+                            {
+                                "label": "Client number 8",
+                                "value": "8|Client number 8"
+                            }
+                        ],
+                        "value": {
+                            "path": "/choice"
+                        },
+                        "filterable": true
+                    },
+                    {
+                        "id": "submit",
+                        "component": "Button",
+                        "variant": "primary",
+                        "child": "submit_label",
+                        "action": {
+                            "event": {
+                                "name": "docsync.pickMany",
+                                "context": {
+                                    "kind": "client",
+                                    "choice": {
+                                        "path": "/choice"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "submit_label",
+                        "component": "Text",
+                        "text": "Use these"
+                    }
+                ]
+            }
+        },
+        {
+            "version": "v0.9",
+            "updateDataModel": {
+                "surfaceId": "many_client_087c802d",
+                "value": {
+                    "choice": []
+                }
+            }
+        }
+    ],
+    "list": [
+        {
+            "version": "v0.9",
+            "createSurface": {
+                "surfaceId": "list_list_todos_0039752b",
+                "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
+            }
+        },
+        {
+            "version": "v0.9",
+            "updateComponents": {
+                "surfaceId": "list_list_todos_0039752b",
+                "components": [
+                    {
+                        "id": "root",
+                        "component": "Column",
+                        "children": [
+                            "head",
+                            "rows"
+                        ]
+                    },
+                    {
+                        "id": "head",
+                        "component": "Text",
+                        "text": "Here are your to-dos:"
+                    },
+                    {
+                        "id": "l0",
+                        "component": "Text",
+                        "text": "File the GST return"
+                    },
+                    {
+                        "id": "h0",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "priority=high, due_date=2026-09-25"
+                    },
+                    {
+                        "id": "b0",
+                        "component": "Column",
+                        "children": [
+                            "l0",
+                            "h0"
+                        ]
+                    },
+                    {
+                        "id": "a0",
+                        "component": "Button",
+                        "child": "b0",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "to-do",
+                                    "id": 41,
+                                    "label": "File the GST return"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c0",
+                        "component": "Card",
+                        "child": "a0"
+                    },
+                    {
+                        "id": "l1",
+                        "component": "Text",
+                        "text": "Call Sharma"
+                    },
+                    {
+                        "id": "h1",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "priority=low"
+                    },
+                    {
+                        "id": "b1",
+                        "component": "Column",
+                        "children": [
+                            "l1",
+                            "h1"
+                        ]
+                    },
+                    {
+                        "id": "a1",
+                        "component": "Button",
+                        "child": "b1",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "to-do",
+                                    "id": 42,
+                                    "label": "Call Sharma"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c1",
+                        "component": "Card",
+                        "child": "a1"
+                    },
+                    {
+                        "id": "rows",
+                        "component": "List",
+                        "direction": "vertical",
+                        "children": [
+                            "c0",
+                            "c1"
+                        ]
+                    }
+                ]
+            }
+        }
+    ],
+    "list_long": [
+        {
+            "version": "v0.9",
+            "createSurface": {
+                "surfaceId": "list_query_tasks_afc514ae",
+                "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
+            }
+        },
+        {
+            "version": "v0.9",
+            "updateComponents": {
+                "surfaceId": "list_query_tasks_afc514ae",
+                "components": [
+                    {
+                        "id": "root",
+                        "component": "Column",
+                        "children": [
+                            "head",
+                            "rows",
+                            "more"
+                        ]
+                    },
+                    {
+                        "id": "head",
+                        "component": "Text",
+                        "text": "Here are the matching tasks:"
+                    },
+                    {
+                        "id": "l0",
+                        "component": "Text",
+                        "text": "Task number 1"
+                    },
+                    {
+                        "id": "b0",
+                        "component": "Column",
+                        "children": [
+                            "l0"
+                        ]
+                    },
+                    {
+                        "id": "a0",
+                        "component": "Button",
+                        "child": "b0",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "task",
+                                    "id": 1,
+                                    "label": "Task number 1"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c0",
+                        "component": "Card",
+                        "child": "a0"
+                    },
+                    {
+                        "id": "l1",
+                        "component": "Text",
+                        "text": "Task number 2"
+                    },
+                    {
+                        "id": "b1",
+                        "component": "Column",
+                        "children": [
+                            "l1"
+                        ]
+                    },
+                    {
+                        "id": "a1",
+                        "component": "Button",
+                        "child": "b1",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "task",
+                                    "id": 2,
+                                    "label": "Task number 2"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c1",
+                        "component": "Card",
+                        "child": "a1"
+                    },
+                    {
+                        "id": "l2",
+                        "component": "Text",
+                        "text": "Task number 3"
+                    },
+                    {
+                        "id": "b2",
+                        "component": "Column",
+                        "children": [
+                            "l2"
+                        ]
+                    },
+                    {
+                        "id": "a2",
+                        "component": "Button",
+                        "child": "b2",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "task",
+                                    "id": 3,
+                                    "label": "Task number 3"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c2",
+                        "component": "Card",
+                        "child": "a2"
+                    },
+                    {
+                        "id": "l3",
+                        "component": "Text",
+                        "text": "Task number 4"
+                    },
+                    {
+                        "id": "b3",
+                        "component": "Column",
+                        "children": [
+                            "l3"
+                        ]
+                    },
+                    {
+                        "id": "a3",
+                        "component": "Button",
+                        "child": "b3",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "task",
+                                    "id": 4,
+                                    "label": "Task number 4"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c3",
+                        "component": "Card",
+                        "child": "a3"
+                    },
+                    {
+                        "id": "l4",
+                        "component": "Text",
+                        "text": "Task number 5"
+                    },
+                    {
+                        "id": "b4",
+                        "component": "Column",
+                        "children": [
+                            "l4"
+                        ]
+                    },
+                    {
+                        "id": "a4",
+                        "component": "Button",
+                        "child": "b4",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "task",
+                                    "id": 5,
+                                    "label": "Task number 5"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c4",
+                        "component": "Card",
+                        "child": "a4"
+                    },
+                    {
+                        "id": "l5",
+                        "component": "Text",
+                        "text": "Task number 6"
+                    },
+                    {
+                        "id": "b5",
+                        "component": "Column",
+                        "children": [
+                            "l5"
+                        ]
+                    },
+                    {
+                        "id": "a5",
+                        "component": "Button",
+                        "child": "b5",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "task",
+                                    "id": 6,
+                                    "label": "Task number 6"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c5",
+                        "component": "Card",
+                        "child": "a5"
+                    },
+                    {
+                        "id": "l6",
+                        "component": "Text",
+                        "text": "Task number 7"
+                    },
+                    {
+                        "id": "b6",
+                        "component": "Column",
+                        "children": [
+                            "l6"
+                        ]
+                    },
+                    {
+                        "id": "a6",
+                        "component": "Button",
+                        "child": "b6",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "task",
+                                    "id": 7,
+                                    "label": "Task number 7"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c6",
+                        "component": "Card",
+                        "child": "a6"
+                    },
+                    {
+                        "id": "l7",
+                        "component": "Text",
+                        "text": "Task number 8"
+                    },
+                    {
+                        "id": "b7",
+                        "component": "Column",
+                        "children": [
+                            "l7"
+                        ]
+                    },
+                    {
+                        "id": "a7",
+                        "component": "Button",
+                        "child": "b7",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "task",
+                                    "id": 8,
+                                    "label": "Task number 8"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c7",
+                        "component": "Card",
+                        "child": "a7"
+                    },
+                    {
+                        "id": "l8",
+                        "component": "Text",
+                        "text": "Task number 9"
+                    },
+                    {
+                        "id": "b8",
+                        "component": "Column",
+                        "children": [
+                            "l8"
+                        ]
+                    },
+                    {
+                        "id": "a8",
+                        "component": "Button",
+                        "child": "b8",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "task",
+                                    "id": 9,
+                                    "label": "Task number 9"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c8",
+                        "component": "Card",
+                        "child": "a8"
+                    },
+                    {
+                        "id": "l9",
+                        "component": "Text",
+                        "text": "Task number 10"
+                    },
+                    {
+                        "id": "b9",
+                        "component": "Column",
+                        "children": [
+                            "l9"
+                        ]
+                    },
+                    {
+                        "id": "a9",
+                        "component": "Button",
+                        "child": "b9",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "task",
+                                    "id": 10,
+                                    "label": "Task number 10"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c9",
+                        "component": "Card",
+                        "child": "a9"
+                    },
+                    {
+                        "id": "l10",
+                        "component": "Text",
+                        "text": "Task number 11"
+                    },
+                    {
+                        "id": "b10",
+                        "component": "Column",
+                        "children": [
+                            "l10"
+                        ]
+                    },
+                    {
+                        "id": "a10",
+                        "component": "Button",
+                        "child": "b10",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "task",
+                                    "id": 11,
+                                    "label": "Task number 11"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c10",
+                        "component": "Card",
+                        "child": "a10"
+                    },
+                    {
+                        "id": "l11",
+                        "component": "Text",
+                        "text": "Task number 12"
+                    },
+                    {
+                        "id": "b11",
+                        "component": "Column",
+                        "children": [
+                            "l11"
+                        ]
+                    },
+                    {
+                        "id": "a11",
+                        "component": "Button",
+                        "child": "b11",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "task",
+                                    "id": 12,
+                                    "label": "Task number 12"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c11",
+                        "component": "Card",
+                        "child": "a11"
+                    },
+                    {
+                        "id": "rows",
+                        "component": "List",
+                        "direction": "vertical",
+                        "children": [
+                            "c0",
+                            "c1",
+                            "c2",
+                            "c3",
+                            "c4",
+                            "c5",
+                            "c6",
+                            "c7",
+                            "c8",
+                            "c9",
+                            "c10",
+                            "c11"
+                        ]
+                    },
+                    {
+                        "id": "more",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "and 18 more"
+                    }
+                ]
+            }
+        }
+    ],
+    "list_no_ids": [
+        {
+            "version": "v0.9",
+            "createSurface": {
+                "surfaceId": "list_list_financial_years_f7255e69",
+                "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
+            }
+        },
+        {
+            "version": "v0.9",
+            "updateComponents": {
+                "surfaceId": "list_list_financial_years_f7255e69",
+                "components": [
+                    {
+                        "id": "root",
+                        "component": "Column",
+                        "children": [
+                            "head",
+                            "rows"
+                        ]
+                    },
+                    {
+                        "id": "head",
+                        "component": "Text",
+                        "text": "Here are the financial years:"
+                    },
+                    {
+                        "id": "l0",
+                        "component": "Text",
+                        "text": "2024-25"
+                    },
+                    {
+                        "id": "b0",
+                        "component": "Column",
+                        "children": [
+                            "l0"
+                        ]
+                    },
+                    {
+                        "id": "c0",
+                        "component": "Card",
+                        "child": "b0"
+                    },
+                    {
+                        "id": "l1",
+                        "component": "Text",
+                        "text": "2025-26"
+                    },
+                    {
+                        "id": "b1",
+                        "component": "Column",
+                        "children": [
+                            "l1"
+                        ]
+                    },
+                    {
+                        "id": "c1",
+                        "component": "Card",
+                        "child": "b1"
+                    },
+                    {
+                        "id": "rows",
+                        "component": "List",
+                        "direction": "vertical",
+                        "children": [
+                            "c0",
+                            "c1"
+                        ]
+                    }
+                ]
+            }
+        }
+    ],
+    "choice": [
+        {
+            "version": "v0.9",
+            "createSurface": {
+                "surfaceId": "choose_status_4193c010",
+                "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
+            }
+        },
+        {
+            "version": "v0.9",
+            "updateComponents": {
+                "surfaceId": "choose_status_4193c010",
+                "components": [
+                    {
+                        "id": "root",
+                        "component": "Column",
+                        "children": [
+                            "q",
+                            "picker",
+                            "submit"
+                        ]
+                    },
+                    {
+                        "id": "q",
+                        "component": "Text",
+                        "text": "Which status should it move to?"
+                    },
+                    {
+                        "id": "picker",
+                        "component": "ChoicePicker",
+                        "variant": "mutuallyExclusive",
+                        "displayStyle": "checkbox",
+                        "options": [
+                            {
+                                "label": "Allotted",
+                                "value": "allotted"
+                            },
+                            {
+                                "label": "Checking",
+                                "value": "checking"
+                            },
+                            {
+                                "label": "Completed",
+                                "value": "completed"
+                            }
+                        ],
+                        "value": {
+                            "path": "/choice"
+                        }
+                    },
+                    {
+                        "id": "submit",
+                        "component": "Button",
+                        "variant": "primary",
+                        "child": "submit_label",
+                        "action": {
+                            "event": {
+                                "name": "docsync.choose",
+                                "context": {
+                                    "param": "status",
+                                    "choice": {
+                                        "path": "/choice"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "submit_label",
+                        "component": "Text",
+                        "text": "Use this"
+                    }
+                ]
+            }
+        },
+        {
+            "version": "v0.9",
+            "updateDataModel": {
+                "surfaceId": "choose_status_4193c010",
+                "value": {
+                    "choice": []
+                }
+            }
+        }
+    ],
+    "undo": [
+        {
+            "version": "v0.9",
+            "createSurface": {
+                "surfaceId": "undo_285191d563",
+                "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
+            }
+        },
+        {
+            "version": "v0.9",
+            "updateComponents": {
+                "surfaceId": "undo_285191d563",
+                "components": [
+                    {
+                        "id": "root",
+                        "component": "Column",
+                        "children": [
+                            "submit"
+                        ]
+                    },
+                    {
+                        "id": "submit",
+                        "component": "Button",
+                        "variant": "borderless",
+                        "child": "submit_label",
+                        "action": {
+                            "event": {
+                                "name": "docsync.choose",
+                                "context": {
+                                    "param": "undo",
+                                    "choice": "to-do #77"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "submit_label",
+                        "component": "Text",
+                        "text": "Undo — remove this to-do"
+                    }
+                ]
+            }
+        }
+    ],
+    "next_steps": [
+        {
+            "version": "v0.9",
+            "createSurface": {
+                "surfaceId": "next_5397ebe5fa",
+                "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
+            }
+        },
+        {
+            "version": "v0.9",
+            "updateComponents": {
+                "surfaceId": "next_5397ebe5fa",
+                "components": [
+                    {
+                        "id": "root",
+                        "component": "Row",
+                        "children": [
+                            "next_0",
+                            "next_1"
+                        ]
+                    },
+                    {
+                        "id": "next_0",
+                        "component": "Button",
+                        "variant": "borderless",
+                        "child": "next_label_0",
+                        "action": {
+                            "event": {
+                                "name": "docsync.choose",
+                                "context": {
+                                    "param": "next",
+                                    "choice": "email invoice #65"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "next_label_0",
+                        "component": "Text",
+                        "text": "Email it to the client"
+                    },
+                    {
+                        "id": "next_1",
+                        "component": "Button",
+                        "variant": "borderless",
+                        "child": "next_label_1",
+                        "action": {
+                            "event": {
+                                "name": "docsync.choose",
+                                "context": {
+                                    "param": "next",
+                                    "choice": "mark invoice #65 paid"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "next_label_1",
+                        "component": "Text",
+                        "text": "Mark it paid"
+                    }
+                ]
+            }
+        }
+    ]
+}
