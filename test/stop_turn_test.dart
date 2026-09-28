@@ -176,9 +176,9 @@ void main() {
     expect(FileKind.of('data.parquet').label, 'PARQUET');
   });
 
-  test('voice language maps to the recogniser locale', () {
-    expect(VoiceLang.auto.localeId, isNull);
-    expect(VoiceLang.english.localeId, 'en_IN');
+  test('voice language codes are what the server whitelists', () {
+    expect(VoiceLang.auto.code, isNull);
+    expect(VoiceLang.english.code, 'en-IN');
     expect(VoiceLang.hindi.code, 'hi-IN');
   });
 }

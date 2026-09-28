@@ -2,22 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/design/tokens.dart';
-import '../../../shared/services/voice_service.dart';
 import '../../chat/controller/chat_controller.dart';
 import '../../chat/model/chat_models.dart';
 import '../../chat/view/widgets/activity_trail.dart';
 import '../../chat/view/widgets/chat_bubble.dart';
 import '../../settings/controller/settings_controller.dart';
+import '../controller/voice_session.dart';
 import 'widgets/mic_orb.dart';
 
-/// The voice-first home: one big orb, what you said, what it is doing, and the answer.
+/// The voice-first home: one big orb, what you said, what it is doing, and the answer — spoken.
 ///
 /// A question asked here is an ordinary chat turn — [ChatController.send] — so it lands in
-/// the same conversation, shows in Recent, and can be carried on in Chat. This screen only
-/// owns the listening; everything after the question is the chat's state, drawn bigger.
-///
-/// Listening is on-device dictation for now. The server speech path (Sarvam STT, spoken
-/// replies, follow-up listening, wake word) replaces [VoiceService] behind this same UI.
+/// the same conversation, shows in Recent, and can be carried on in Chat. [VoiceSession] owns
+/// the audio either side of it; everything in between is the chat's state, drawn bigger.
 class VoiceScreen extends ConsumerStatefulWidget {
   const VoiceScreen({super.key, required this.onOpenChat});
 
@@ -29,141 +26,59 @@ class VoiceScreen extends ConsumerStatefulWidget {
 }
 
 class _VoiceScreenState extends ConsumerState<VoiceScreen> {
-  bool _listening = false;
-  String _heard = '';
-  double _level = 0;
-
-  /// The question this screen last asked. Null until one is asked, so a conversation
-  /// opened from Recent does not suddenly appear here as if it had been spoken.
-  String? _asked;
-
   static const _suggestions = [
     'Which clients have pending GST filings?',
     'Remind me to call Amit Traders tomorrow at 11',
     'Show the latest invoice for a client',
   ];
 
-  Future<void> _toggleListening() async {
-    final voice = ref.read(voiceServiceProvider);
-    final chat = ref.read(chatControllerProvider);
-    if (chat.sending) {
-      await ref.read(chatControllerProvider.notifier).stop();
-      return;
-    }
-    if (_listening) {
-      await voice.stop();
-      return;
-    }
-    setState(() {
-      _heard = '';
-      _level = 0;
-    });
-    final ok = await voice.start(
-      localeId: ref.read(settingsControllerProvider).voiceLang.localeId,
-      // The recogniser reports roughly -2..10; the orb wants 0..1.
-      onLevel: (l) {
-        if (mounted) setState(() => _level = ((l + 2) / 12).clamp(0.0, 1.0));
-      },
-      onResult: (text, isFinal) {
-        if (!mounted) return;
-        setState(() => _heard = text);
-        if (isFinal) _ask(text);
-      },
-      onDone: () {
-        if (mounted) setState(() => _listening = false);
-      },
-    );
-    if (!mounted) return;
-    if (!ok) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Microphone unavailable or permission denied.'),
-      ));
-      return;
-    }
-    setState(() => _listening = true);
-  }
-
-  Future<void> _ask(String text) async {
-    final q = text.trim();
-    if (q.isEmpty) return;
-    final sent = await ref.read(chatControllerProvider.notifier).send(q);
-    if (!mounted) return;
-    if (!sent) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Still answering — tap the orb to stop it first.'),
-      ));
-    }
-  }
-
-  void _askTyped(String text) {
-    setState(() {
-      _asked = text;
-      _heard = '';
-    });
-    _ask(text);
-  }
+  VoiceSession get _session => ref.read(voiceSessionProvider.notifier);
 
   void _clear() {
     if (ref.read(chatControllerProvider).sending) return;
     ref.read(chatControllerProvider.notifier).newChat();
-    setState(() {
-      _asked = null;
-      _heard = '';
-    });
-  }
-
-  @override
-  void dispose() {
-    if (_listening) ref.read(voiceServiceProvider).cancel();
-    super.dispose();
+    _session.reset();
   }
 
   @override
   Widget build(BuildContext context) {
-    // A final transcript becomes the asked question the moment the turn starts.
-    ref.listen(chatControllerProvider.select((s) => s.sending), (was, now) {
-      if (now && _heard.isNotEmpty) {
-        setState(() {
-          _asked = _heard;
-          _heard = '';
-        });
-      }
-    });
-
-    final sending = ref.watch(chatControllerProvider.select((s) => s.sending));
+    final v = ref.watch(voiceSessionProvider);
     final stopping = ref.watch(chatControllerProvider.select((s) => s.stopping));
-    final mode = _listening
-        ? OrbMode.listening
-        : sending
-            ? OrbMode.thinking
-            : OrbMode.idle;
+    final mode = switch (v.phase) {
+      VoicePhase.idle => OrbMode.idle,
+      VoicePhase.listening => OrbMode.listening,
+      VoicePhase.transcribing || VoicePhase.thinking => OrbMode.thinking,
+      VoicePhase.speaking => OrbMode.speaking,
+    };
 
-    final hasResult = _asked != null;
-    return hasResult
+    /* The question stays null until one is asked HERE, so a conversation opened from Recent
+       does not suddenly appear on this screen as if it had been spoken. */
+    return v.asked != null
         ? _ResultLayout(
-            asked: _asked!,
-            heard: _heard,
+            asked: v.asked!,
+            note: v.note,
             mode: mode,
-            level: _level,
+            level: v.level,
             stopping: stopping,
-            onOrb: _toggleListening,
+            onOrb: _session.tap,
             onOpenChat: widget.onOpenChat,
             onClear: _clear,
           )
         : _IdleLayout(
-            heard: _heard,
+            note: v.note,
             mode: mode,
-            level: _level,
-            onOrb: _toggleListening,
+            level: v.level,
+            onOrb: _session.tap,
             suggestions: _suggestions,
-            onSuggestion: _askTyped,
+            onSuggestion: (s) => _session.ask(s,
+                lang: ref.read(settingsControllerProvider).voiceLang.code),
           );
   }
 }
 
 class _IdleLayout extends StatelessWidget {
   const _IdleLayout({
-    required this.heard,
+    required this.note,
     required this.mode,
     required this.level,
     required this.onOrb,
@@ -171,7 +86,7 @@ class _IdleLayout extends StatelessWidget {
     required this.onSuggestion,
   });
 
-  final String heard;
+  final String? note;
   final OrbMode mode;
   final double level;
   final VoidCallback onOrb;
@@ -192,15 +107,18 @@ class _IdleLayout extends StatelessWidget {
             children: [
               const SizedBox(height: Ds.s4),
               Text(
-                listening
-                    ? (heard.isEmpty ? 'Go ahead, I\'m listening' : heard)
-                    : 'What can I do\nfor you today?',
+                switch (mode) {
+                  OrbMode.listening => 'Go ahead,\nI\'m listening',
+                  OrbMode.thinking => 'One moment…',
+                  _ => 'What can I do\nfor you today?',
+                },
                 textAlign: TextAlign.center,
                 style: theme.textTheme.headlineSmall?.copyWith(height: 1.25),
               ),
               const SizedBox(height: Ds.s2),
               MicOrb(mode: mode, level: level, onTap: onOrb),
               _StatusPill(mode: mode),
+              if (note != null) _Note(text: note!),
               const SizedBox(height: Ds.s4),
               if (!listening) _Suggestions(items: suggestions, onTap: onSuggestion),
               const SizedBox(height: Ds.s4),
@@ -215,7 +133,7 @@ class _IdleLayout extends StatelessWidget {
 class _ResultLayout extends ConsumerWidget {
   const _ResultLayout({
     required this.asked,
-    required this.heard,
+    required this.note,
     required this.mode,
     required this.level,
     required this.stopping,
@@ -225,7 +143,7 @@ class _ResultLayout extends ConsumerWidget {
   });
 
   final String asked;
-  final String heard;
+  final String? note;
   final OrbMode mode;
   final double level;
   final bool stopping;
@@ -240,8 +158,6 @@ class _ResultLayout extends ConsumerWidget {
         .select((s) => (steps: s.trail, done: s.trailDone, elapsed: s.elapsed)));
     final ChatMessage? answer = ref.watch(chatControllerProvider.select((s) =>
         s.messages.isNotEmpty && !s.messages.last.isUser ? s.messages.last : null));
-    final listening = mode == OrbMode.listening;
-
     return Column(
       children: [
         Expanded(
@@ -288,13 +204,7 @@ class _ResultLayout extends ConsumerWidget {
             ],
           ),
         ),
-        if (listening && heard.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: Ds.s6),
-            child: Text(heard,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.titleMedium?.copyWith(color: Ds.inkSoft)),
-          ),
+        if (note != null) _Note(text: note!),
         MicOrb(mode: mode, level: level, size: 76, onTap: onOrb),
         Padding(
           padding: const EdgeInsets.only(bottom: Ds.s3),
@@ -303,6 +213,20 @@ class _ResultLayout extends ConsumerWidget {
       ],
     );
   }
+}
+
+/// A one-line notice: "I didn't hear anything", or why voice is unavailable.
+class _Note extends StatelessWidget {
+  const _Note({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(Ds.s6, Ds.s2, Ds.s6, 0),
+        child: Text(text,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Ds.muted)),
+      );
 }
 
 /// "Listening…" / "Working on it — tap to stop" under the orb.

@@ -48,9 +48,5 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
-        <!-- speech_to_text: allows binding to the on-device recognizer -->
-        <intent>
-            <action android:name="android.speech.RecognitionService"/>
-        </intent>
     </queries>
 </manifest>

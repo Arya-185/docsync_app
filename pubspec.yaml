@@ -37,7 +37,6 @@ dependencies:
   dio: ^5.11.1
   cookie_jar: ^4.0.9
   dio_cookie_manager: ^3.5.0
-  speech_to_text: ^7.4.0
   shared_preferences: ^2.5.5
   path_provider: ^2.1.6
   flutter_riverpod: ^3.4.3
@@ -47,6 +46,9 @@ dependencies:
   flutter_markdown_plus: ^1.0.12
   open_filex: ^4.7.0
   share_plus: ^13.3.0
+  record: ^7.1.1
+  just_audio: ^0.10.6
+  audio_session: ^0.2.4
 dev_dependencies:
   flutter_test:
     sdk: flutter

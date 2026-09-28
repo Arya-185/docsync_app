@@ -4,9 +4,9 @@ import '../../../core/providers.dart';
 
 /// The language the user speaks to the app in.
 ///
-/// [auto] lets the recogniser decide (the phone's default for on-device dictation; Sarvam's
-/// own detection once speech moves to the server). Hinglish is not a separate choice: it is
-/// what Sarvam's code-mixed mode handles under [auto].
+/// [auto] lets Sarvam's recogniser detect it. Hinglish is not a separate choice: it is what
+/// the code-mixed mode handles under [auto]. The code is also sent with a voice turn so the
+/// server can ask for a reply in the same language.
 enum VoiceLang {
   auto('Automatic', null),
   english('English (India)', 'en-IN'),
@@ -17,9 +17,6 @@ enum VoiceLang {
 
   /// BCP-47 code sent with a voice turn, or null for automatic.
   final String? code;
-
-  /// The on-device recogniser's spelling of [code].
-  String? get localeId => code?.replaceAll('-', '_');
 }
 
 class AppSettings {
