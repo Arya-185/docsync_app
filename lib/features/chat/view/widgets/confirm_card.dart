@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../controller/chat_controller.dart';
+import '../../controller/commit_ledger.dart';
 import '../../model/chat_models.dart';
 
 /// A `[high_write]` proposal: the server proposes, the user confirms here, and
@@ -30,18 +31,18 @@ class _ConfirmCardState extends ConsumerState<ConfirmCard> {
   String _note = '';
   bool _noteIsError = false;
 
+  int get _conv => ref.read(chatControllerProvider).conversationId;
+
   Future<void> _confirm() async {
     setState(() {
       _phase = _Phase.working;
       _note = 'Working…';
       _noteIsError = false;
     });
-    final conv = ref.read(chatControllerProvider).conversationId;
-    final res = await ref.read(chatRepositoryProvider).commit(
-          widget.proposal.name,
-          widget.proposal.commitArgs,
-          conv: conv,
-        );
+    // Through the ledger: the same proposal may also be answered by voice.
+    final res = await ref
+        .read(commitLedgerProvider.notifier)
+        .commit(_conv, widget.proposal.name, widget.proposal.commitArgs);
     if (!mounted) return;
     setState(() {
       _phase = res.ok ? _Phase.committed : _Phase.idle;
@@ -50,11 +51,42 @@ class _ConfirmCardState extends ConsumerState<ConfirmCard> {
     });
   }
 
+  void _cancel() {
+    ref
+        .read(commitLedgerProvider.notifier)
+        .cancel(_conv, widget.proposal.name, widget.proposal.commitArgs);
+    setState(() {
+      _phase = _Phase.cancelled;
+      _note = 'Cancelled.';
+      _noteIsError = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final p = widget.proposal;
+    // Answered elsewhere (by voice)? Retire the buttons here too.
+    final conv = ref.watch(chatControllerProvider.select((s) => s.conversationId));
+    final key = CommitLedger.keyFor(conv, p.name, p.commitArgs);
+    final other = ref.watch(commitLedgerProvider.select((l) => l[key]));
+    if (_phase == _Phase.idle && other != null) {
+      switch (other.phase) {
+        case CommitPhase.working:
+          _phase = _Phase.working;
+          _note = 'Working…';
+        case CommitPhase.done:
+          _phase = _Phase.committed;
+          _note = other.message;
+        case CommitPhase.cancelled:
+          _phase = _Phase.cancelled;
+          _note = 'Cancelled.';
+      }
+    } else if (_phase == _Phase.working && other?.phase == CommitPhase.done) {
+      _phase = _Phase.committed;
+      _note = other!.message;
+    }
 
     return Container(
       margin: const EdgeInsets.only(top: 6),
@@ -105,13 +137,7 @@ class _ConfirmCardState extends ConsumerState<ConfirmCard> {
                 ),
                 const SizedBox(width: 8),
                 OutlinedButton(
-                  onPressed: _phase == _Phase.working
-                      ? null
-                      : () => setState(() {
-                            _phase = _Phase.cancelled;
-                            _note = 'Cancelled.';
-                            _noteIsError = false;
-                          }),
+                  onPressed: _phase == _Phase.working ? null : _cancel,
                   child: const Text('Cancel'),
                 ),
               ],

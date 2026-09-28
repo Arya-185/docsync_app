@@ -1,246 +1,293 @@
-// One spoken exchange through the REAL VoiceSession and ChatController, with the mic, the
-// speech server and the speaker faked: listen → endpoint → transcribe → voice turn → speak.
+// A spoken CONVERSATION through the REAL VoiceSession, ChatController and CommitLedger, with
+// the mic, the speech server and the speaker faked.
 
-import 'dart:async';
-import 'dart:math' as math;
-import 'dart:typed_data';
+import 'dart:convert';
+import 'dart:io';
 
-import 'package:dio/dio.dart';
-import 'package:docsync_app/core/providers.dart';
 import 'package:docsync_app/features/chat/controller/chat_controller.dart';
+import 'package:docsync_app/features/chat/controller/commit_ledger.dart';
 import 'package:docsync_app/features/voice/controller/voice_session.dart';
-import 'package:docsync_app/features/voice/model/audio_capture.dart';
 import 'package:docsync_app/features/voice/model/speech_repository.dart';
-import 'package:docsync_app/features/voice/model/tts_player.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-import 'support/scripted_chat_repository.dart';
+import 'support/voice_fakes.dart';
 
-Uint8List tone(int ms, double amp) {
-  final n = 16000 * ms ~/ 1000;
-  final b = ByteData(n * 2);
-  for (var i = 0; i < n; i++) {
-    b.setInt16(i * 2, (amp * 32767 * math.sin(2 * math.pi * 220 * i / 16000)).round(), Endian.little);
-  }
-  return b.buffer.asUint8List();
-}
-
-/// A mic that "hears" [script] in 20 ms chunks as fast as the test can take them.
-class FakeCapture implements AudioCapture {
-  FakeCapture(this.script, {this.permitted = true});
-  final List<Uint8List> script;
-  final bool permitted;
-  int starts = 0;
-  bool running = false;
-  StreamController<Uint8List>? _c;
-
-  @override
-  Future<bool> hasPermission() async => permitted;
-
-  @override
-  Future<Stream<Uint8List>> start() async {
-    starts++;
-    running = true;
-    final c = _c = StreamController<Uint8List>();
-    () async {
-      for (final block in script) {
-        for (var i = 0; i < block.length; i += 640) {
-          if (!running || c.isClosed) return;
-          c.add(Uint8List.sublistView(block, i, math.min(i + 640, block.length)));
-          await Future<void>.delayed(Duration.zero);
-        }
-      }
-    }();
-    return c.stream;
-  }
-
-  @override
-  Future<void> stop() async {
-    running = false;
-    await _c?.close();
-  }
-
-  @override
-  Future<void> dispose() => stop();
-}
-
-class FakeSpeech implements SpeechRepository {
-  FakeSpeech({this.transcript = 'kal subah 11 baje Amit ko call karna yaad dilana', this.fail});
-  final String transcript;
-  final SpeechException? fail;
-  final List<({int bytes, String? lang})> heard = [];
-  final List<({String text, String? lang})> spoken = [];
-
-  @override
-  Future<Transcript> transcribe(Uint8List wav, {String? lang, CancelToken? cancel}) async {
-    heard.add((bytes: wav.length, lang: lang));
-    if (fail != null) throw fail!;
-    return Transcript(transcript, 'hi-IN');
-  }
-
-  @override
-  Future<Uint8List> synthesize(String text,
-      {String? lang, String? speaker, double pace = 1.0, CancelToken? cancel}) async {
-    spoken.add((text: text, lang: lang));
-    return Uint8List.fromList([1, 2, 3]);
-  }
-
-  @override
-  dynamic noSuchMethod(Invocation i) => super.noSuchMethod(i);
-}
-
-class FakePlayer implements SpeechPlayer {
-  final List<Future<Uint8List>> queue = [];
-  int stops = 0;
-  Completer<void>? gate; // when set, "playback" lasts until the test completes it
-
-  @override
-  bool get busy => queue.isNotEmpty;
-
-  @override
-  Future<void> get drained => gate?.future ?? Future<void>.value();
-
-  @override
-  void enqueue(Future<Uint8List> audio) => queue.add(audio);
-
-  @override
-  Future<void> stop() async {
-    stops++;
-    if (gate != null && !gate!.isCompleted) gate!.complete();
-  }
-
-  @override
-  Future<void> dispose() async {}
-}
-
-const answerScript = <Map<String, dynamic>>[
+const answer = <Map<String, dynamic>>[
   {'type': 'conversation', 'id': 5, 'turn': 1},
   {'type': 'token', 'text': 'Theek hai, kal subah 11 baje ka reminder set kar diya hai. '},
   {'type': 'token', 'text': 'Amit Traders ko call karna hai.'},
   {'type': 'final', 'answer': 'Theek hai, kal subah 11 baje ka reminder set kar diya hai. Amit Traders ko call karna hai.'},
 ];
 
-Future<({ProviderContainer c, FakeCapture mic, FakeSpeech speech, FakePlayer player, ScriptedChatRepository chat})>
-    harness({
-  List<Uint8List>? audio,
-  FakeSpeech? speech,
-  bool permitted = true,
-  List<Map<String, dynamic>> script = answerScript,
-}) async {
-  SharedPreferences.setMockInitialValues({});
-  final prefs = await SharedPreferences.getInstance();
-  final mic = FakeCapture(
-    audio ?? [tone(300, 0), tone(900, 0.3), tone(1000, 0)],
-    permitted: permitted,
-  );
-  final sp = speech ?? FakeSpeech();
-  final player = FakePlayer();
-  final chat = ScriptedChatRepository(script);
-  final c = ProviderContainer(overrides: [
-    sharedPreferencesProvider.overrideWithValue(prefs),
-    chatRepositoryProvider.overrideWithValue(chat),
-    audioCaptureProvider.overrideWithValue(mic),
-    speechRepositoryProvider.overrideWithValue(sp),
-    speechPlayerProvider.overrideWithValue(player),
-  ]);
-  addTearDown(c.dispose);
-  c.listen(voiceSessionProvider, (_, _) {}); // keep it alive like the screen does
-  return (c: c, mic: mic, speech: sp, player: player, chat: chat);
-}
+List<Map<String, dynamic>> confirmTurn(String name, Map<String, dynamic> args, String summary) => [
+      {'type': 'conversation', 'id': 6, 'turn': 1},
+      {'type': 'confirm', 'name': name, 'summary': summary, 'commit_args': args},
+    ];
 
-/// Let the fake mic, the endpointer and the chat turn run to quiet.
-Future<void> settle(ProviderContainer c) async {
-  for (var i = 0; i < 400; i++) {
-    await Future<void>.delayed(Duration.zero);
-    final p = c.read(voiceSessionProvider).phase;
-    if (i > 10 && p == VoicePhase.idle) return;
-  }
+/// A turn that asks "Which Acme did you mean?" with the picker surface the server composes.
+List<Map<String, dynamic>> pickerTurn() {
+  final fixtures = jsonDecode(File('test/fixtures/surfaces.json').readAsStringSync()) as Map;
+  return [
+    {'type': 'conversation', 'id': 7, 'turn': 1},
+    {'type': 'token', 'text': 'Which Acme did you mean?'},
+    for (final m in fixtures['picker'] as List) {'type': 'a2ui', 'msg': m},
+    {'type': 'final', 'answer': 'Which Acme did you mean?'},
+  ];
 }
 
 void main() {
-  test('speak → heard → asked as a voice turn → the answer is spoken sentence by sentence',
-      () async {
-    final h = await harness();
-    await h.c.read(voiceSessionProvider.notifier).listen();
-    expect(h.c.read(voiceSessionProvider).phase, VoicePhase.listening);
-    await settle(h.c);
+  group('one exchange', () {
+    test('speak → heard → asked as a voice turn → spoken sentence by sentence', () async {
+      final h = await voiceHarness(
+          script: answer, mic: [utterance()], transcripts: ['kal 11 baje Amit ko call yaad dilana']);
+      await h.c.read(voiceSessionProvider.notifier).listen();
+      await settle(h.c);
 
-    expect(h.speech.heard, hasLength(1), reason: 'one utterance, transcribed once');
-    expect(h.speech.heard.single.bytes, greaterThan(44), reason: 'a WAV with samples in it');
-    expect(h.mic.running, isFalse, reason: 'the mic is closed once the utterance ends');
+      expect(h.speech.heard, hasLength(1));
+      expect(h.speech.heard.single.bytes, greaterThan(44), reason: 'a WAV with samples in it');
+      expect(h.mic.running, isFalse, reason: 'the mic is closed once the utterance ends');
+      expect(h.chat.asked, ['kal 11 baje Amit ko call yaad dilana']);
+      expect(h.chat.voiceFlags.single, (voice: true, lang: 'hi-IN'));
+      expect(h.speech.spoken, [
+        'Theek hai, kal subah 11 baje ka reminder set kar diya hai.',
+        'Amit Traders ko call karna hai.',
+      ]);
+      expect(h.c.read(voiceSessionProvider).phase, VoicePhase.idle);
+    });
 
-    expect(h.chat.asked, ['kal subah 11 baje Amit ko call karna yaad dilana']);
-    expect(h.chat.voiceFlags.single.voice, isTrue);
-    expect(h.chat.voiceFlags.single.lang, 'hi-IN', reason: 'the detected language is passed on');
+    test('silence is "I didn\'t hear anything", and nothing is sent anywhere', () async {
+      final h = await voiceHarness(script: answer, mic: [silence()]);
+      await h.c.read(voiceSessionProvider.notifier).listen();
+      await settle(h.c);
+      expect(h.speech.heard, isEmpty);
+      expect(h.chat.asked, isEmpty);
+      expect(h.c.read(voiceSessionProvider).note, contains('didn\'t hear'));
+    });
 
-    expect(h.speech.spoken.map((s) => s.text), [
-      'Theek hai, kal subah 11 baje ka reminder set kar diya hai.',
-      'Amit Traders ko call karna hai.',
-    ]);
-    expect(h.speech.spoken.every((s) => s.lang == 'hi-IN'), isTrue);
+    test('no mic permission says so', () async {
+      final h = await voiceHarness(script: answer, permitted: false);
+      await h.c.read(voiceSessionProvider.notifier).listen();
+      expect(h.mic.starts, 0);
+      expect(h.c.read(voiceSessionProvider).note, contains('microphone'));
+    });
 
-    final v = h.c.read(voiceSessionProvider);
-    expect(v.phase, VoicePhase.idle);
-    expect(v.asked, 'kal subah 11 baje Amit ko call karna yaad dilana');
+    test('out of speech credits is reported, and the question is not guessed at', () async {
+      final h = await voiceHarness(
+          script: answer, mic: [utterance()], sttFails: SpeechException(SpeechError.quota));
+      await h.c.read(voiceSessionProvider.notifier).listen();
+      await settle(h.c);
+      expect(h.chat.asked, isEmpty);
+      expect(h.c.read(voiceSessionProvider).note, contains('out of credits'));
+    });
   });
 
-  test('silence is "I didn\'t hear anything", and nothing is sent anywhere', () async {
-    final h = await harness(audio: [tone(9000, 0)]);
-    await h.c.read(voiceSessionProvider.notifier).listen();
-    await settle(h.c);
-    expect(h.speech.heard, isEmpty);
-    expect(h.chat.asked, isEmpty);
-    expect(h.c.read(voiceSessionProvider).note, contains('didn\'t hear'));
+  group('follow-up', () {
+    test('after the reply it keeps listening, and a follow-up is a second turn', () async {
+      final h = await voiceHarness(
+        script: answer,
+        followUp: true,
+        mic: [utterance(), utterance(), silence()],
+        transcripts: ['reminder lagao', 'aur kya pending hai'],
+      );
+      await h.c.read(voiceSessionProvider.notifier).listen();
+      await settle(h.c);
+      expect(h.chat.asked, ['reminder lagao', 'aur kya pending hai']);
+      expect(h.c.read(voiceSessionProvider).phase, VoicePhase.idle);
+      expect(h.c.read(voiceSessionProvider).note, isNull, reason: 'a quiet ending is not an error');
+    });
+
+    test('"stop" in the follow-up window ends it without a turn', () async {
+      final h = await voiceHarness(
+        script: answer,
+        followUp: true,
+        mic: [utterance(), utterance()],
+        transcripts: ['reminder lagao', 'bas'],
+      );
+      await h.c.read(voiceSessionProvider.notifier).listen();
+      await settle(h.c);
+      expect(h.chat.asked, ['reminder lagao']);
+    });
   });
 
-  test('no mic permission says so instead of silently doing nothing', () async {
-    final h = await harness(permitted: false);
-    await h.c.read(voiceSessionProvider.notifier).listen();
-    expect(h.mic.starts, 0);
-    expect(h.c.read(voiceSessionProvider).note, contains('microphone'));
+  group('spoken confirm', () {
+    const args = {'task_creation_id': 581, 'status': 'completed'};
+
+    test('"haan kar do" commits once, through the ledger', () async {
+      final h = await voiceHarness(
+        script: confirmTurn('set_task_status', args, 'Move task #581 to completed.'),
+        mic: [utterance()],
+        transcripts: ['haan kar do'],
+      );
+      await h.c.read(voiceSessionProvider.notifier).ask('task 581 complete karo');
+      await settle(h.c);
+      expect(h.speech.spoken.first, 'Move task #581 to completed. Shall I go ahead?');
+      expect(h.chat.commits, hasLength(1));
+      expect(h.chat.commits.single.action, 'set_task_status');
+      expect(h.chat.commits.single.args, args);
+      expect(h.speech.spoken.last, 'Done.');
+      // And the on-screen Confirm cannot write it again.
+      final again =
+          await h.c.read(commitLedgerProvider.notifier).commit(6, 'set_task_status', args);
+      expect(again.ok, isFalse);
+      expect(h.chat.commits, hasLength(1));
+    });
+
+    test('"nahi" cancels, and a later tap cannot resurrect it', () async {
+      final h = await voiceHarness(
+        script: confirmTurn('set_task_status', args, 'Move task #581 to completed.'),
+        mic: [utterance()],
+        transcripts: ['nahi'],
+      );
+      await h.c.read(voiceSessionProvider.notifier).ask('task 581 complete karo');
+      await settle(h.c);
+      expect(h.chat.commits, isEmpty);
+      expect(h.speech.spoken.last, 'Okay, cancelled.');
+      final tap = await h.c.read(commitLedgerProvider.notifier).commit(6, 'set_task_status', args);
+      expect(tap.ok, isFalse);
+      expect(h.chat.commits, isEmpty);
+    });
+
+    test('an unclear reply is asked again, never guessed', () async {
+      final h = await voiceHarness(
+        script: confirmTurn('set_task_status', args, 'Move task #581 to completed.'),
+        mic: [utterance(), utterance()],
+        transcripts: ['haan nahi', 'yes'],
+      );
+      await h.c.read(voiceSessionProvider.notifier).ask('task 581 complete karo');
+      await settle(h.c);
+      expect(h.speech.spoken, contains('Sorry, was that a yes or a no?'));
+      expect(h.chat.commits, hasLength(1));
+    });
+
+    test('a new request instead of yes/no leaves the card alone and is asked', () async {
+      final h = await voiceHarness(
+        script: confirmTurn('set_task_status', args, 'Move task #581 to completed.'),
+        mic: [utterance()],
+        transcripts: ['pehle mujhe Amit Traders ke saare pending tasks dikhao please'],
+      );
+      await h.c.read(voiceSessionProvider.notifier).ask('task 581 complete karo');
+      await settle(h.c);
+      expect(h.chat.commits, isEmpty);
+      expect(h.chat.asked.last, 'pehle mujhe Amit Traders ke saare pending tasks dikhao please');
+    });
+
+    group('outbound (to the client)', () {
+      const send = {'invoice_main_id': 65, 'to': 'client', 'channel': 'email'};
+
+      test('yes, then "cancel" in the 3-second window: nothing is sent', () async {
+        final h = await voiceHarness(
+          script: confirmTurn('send_invoice', send, 'Email invoice #65 to Amit Traders.'),
+          mic: [utterance(), utterance()],
+          transcripts: ['yes', 'cancel'],
+        );
+        await h.c.read(voiceSessionProvider.notifier).ask('invoice 65 bhej do');
+        await settle(h.c);
+        expect(h.speech.spoken, contains('Sending in three seconds. Say cancel to stop.'));
+        expect(h.chat.commits, isEmpty);
+        expect(h.speech.spoken.last, 'Okay, I haven\'t sent it.');
+      });
+
+      test('yes, then silence: it is sent', () async {
+        final h = await voiceHarness(
+          script: confirmTurn('send_invoice', send, 'Email invoice #65 to Amit Traders.'),
+          mic: [utterance(), silence()],
+          transcripts: ['haan bhej do'],
+        );
+        await h.c.read(voiceSessionProvider.notifier).ask('invoice 65 bhej do');
+        await settle(h.c);
+        expect(h.chat.commits.single.action, 'send_invoice');
+      });
+
+      test('to "me" is not outbound: no cancel window', () async {
+        final h = await voiceHarness(
+          script: confirmTurn('send_invoice', {...send, 'to': 'me'}, 'Email invoice #65 to you.'),
+          mic: [utterance()],
+          transcripts: ['yes'],
+        );
+        await h.c.read(voiceSessionProvider.notifier).ask('invoice mujhe bhejo');
+        await settle(h.c);
+        expect(h.speech.spoken, isNot(contains('Sending in three seconds. Say cancel to stop.')));
+        expect(h.chat.commits, hasLength(1));
+      });
+    });
   });
 
-  test('out of speech credits is reported, and the question is not guessed at', () async {
-    final h = await harness(speech: FakeSpeech(fail: SpeechException(SpeechError.quota)));
-    await h.c.read(voiceSessionProvider.notifier).listen();
-    await settle(h.c);
-    expect(h.chat.asked, isEmpty);
-    expect(h.c.read(voiceSessionProvider).note, contains('out of credits'));
+  group('spoken picker', () {
+    test('the options are read out and "doosra wala" sends what tapping the second sends',
+        () async {
+      final h = await voiceHarness(script: pickerTurn(), mic: [utterance()], transcripts: ['doosra wala']);
+      await h.c.read(voiceSessionProvider.notifier).ask('Acme ka status');
+      await settle(h.c);
+      expect(h.speech.spoken.any((s) => s.contains('Second, Acme Exports.')), isTrue);
+      expect(h.chat.asked[1], 'Use client #2145 — Acme Exports.');
+    });
+
+    test('a name works too', () async {
+      final h = await voiceHarness(
+          script: pickerTurn(), mic: [utterance()], transcripts: ['Acme Holdings']);
+      await h.c.read(voiceSessionProvider.notifier).ask('Acme ka status');
+      await settle(h.c);
+      expect(h.chat.asked[1], 'Use client #2146 — Acme Holdings.');
+    });
   });
 
-  test('a card with no prose tells the user to look at the screen', () async {
-    final h = await harness(script: const [
-      {'type': 'conversation', 'id': 6, 'turn': 1},
-      {
-        'type': 'confirm',
-        'tool': 'send_invoice',
-        'label': 'Send invoice #65',
-        'summary': 'Send invoice #65 to Amit Traders',
-        'commit_args': {'invoice_id': 65},
-      },
-    ]);
-    await h.c.read(voiceSessionProvider.notifier).ask('invoice 65 bhej do');
-    await settle(h.c);
-    expect(h.speech.spoken.map((s) => s.text), ['Please check your screen.']);
+  group('interrupting', () {
+    test('talking over the reply stops it; "ruko" ends the conversation', () async {
+      final h = await voiceHarness(
+        script: answer,
+        bargeIn: true,
+        holdPlayback: true,
+        mic: [utterance()], // heard by the barge-in listener while it talks
+        transcripts: ['ruko'],
+      );
+      await h.c.read(voiceSessionProvider.notifier).ask('status batao');
+      await settle(h.c);
+      expect(h.player.stops, greaterThan(0));
+      expect(h.chat.asked, ['status batao']);
+      expect(h.c.read(voiceSessionProvider).phase, VoicePhase.idle);
+    });
+
+    test('talking over it with a question asks that question next', () async {
+      final h = await voiceHarness(
+        script: answer,
+        bargeIn: true,
+        holdPlayback: true,
+        mic: [utterance()],
+        transcripts: ['aur GST ka kya hua'],
+      );
+      await h.c.read(voiceSessionProvider.notifier).ask('status batao');
+      await settle(h.c);
+      expect(h.chat.asked.take(2), ['status batao', 'aur GST ka kya hua']);
+    });
+
+    test('a tap while it talks stops the conversation', () async {
+      final h = await voiceHarness(script: answer, holdPlayback: true);
+      final session = h.c.read(voiceSessionProvider.notifier);
+      final run = session.ask('status batao');
+      for (var i = 0; i < 200 && h.c.read(voiceSessionProvider).phase != VoicePhase.speaking; i++) {
+        await Future<void>.delayed(Duration.zero);
+      }
+      expect(h.c.read(voiceSessionProvider).phase, VoicePhase.speaking);
+      await session.tap();
+      await run;
+      await settle(h.c);
+      expect(h.c.read(voiceSessionProvider).phase, VoicePhase.idle);
+      expect(h.chat.asked, ['status batao']);
+    });
   });
 
-  test('tapping while it talks stops it, and the rest of that answer stays quiet', () async {
-    final h = await harness();
-    h.player.gate = Completer<void>();
+  test('leaving the screen releases the mic mid-question', () async {
+    final h = await voiceHarness(script: answer, mic: [silence()]);
     final session = h.c.read(voiceSessionProvider.notifier);
-    final turn = session.ask('status batao');
-    await Future<void>.delayed(Duration.zero);
-    for (var i = 0; i < 20 && h.c.read(voiceSessionProvider).phase != VoicePhase.speaking; i++) {
+    final run = session.listen();
+    for (var i = 0; i < 50 && !h.mic.running; i++) {
       await Future<void>.delayed(Duration.zero);
     }
-    expect(h.c.read(voiceSessionProvider).phase, VoicePhase.speaking);
-    final before = h.speech.spoken.length;
-    await session.tap();
-    await turn;
-    expect(h.player.stops, greaterThan(0));
-    expect(h.c.read(voiceSessionProvider).phase, VoicePhase.idle);
-    expect(h.speech.spoken.length, before, reason: 'no sentence is synthesised after the tap');
+    expect(h.mic.running, isTrue);
+    await session.cancel();
+    await run;
+    expect(h.mic.running, isFalse);
+    expect(h.chat.asked, isEmpty);
+    expect(h.c.read(chatControllerProvider).sending, isFalse);
   });
 }

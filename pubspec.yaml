@@ -49,6 +49,7 @@ dependencies:
   record: ^7.1.1
   just_audio: ^0.10.6
   audio_session: ^0.2.4
+  open_wake_word: ^0.3.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -84,6 +85,9 @@ flutter:
 
   assets:
     - assets/images/docsync_logo.png
+    # openWakeWord: the two shared feature models + the wake phrase. A trained
+    # hey_docsync.onnx dropped in here is picked up automatically (tool/wakeword/README.md).
+    - assets/wakeword/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

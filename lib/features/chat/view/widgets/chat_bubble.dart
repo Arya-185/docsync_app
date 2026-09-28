@@ -7,7 +7,9 @@ import '../../../../shared/models/citation.dart';
 import '../../../../shared/widgets/file_card.dart';
 import '../../../clients/controller/client_directory.dart';
 import '../../../files/view/file_actions_sheet.dart';
+import '../../../voice/model/voice_choices.dart';
 import '../../controller/chat_controller.dart';
+import '../../controller/commit_ledger.dart';
 import '../../model/a2ui_actions.dart';
 import '../../model/chat_models.dart';
 import 'a2ui_surface_view.dart';
@@ -136,12 +138,17 @@ class _AssistantBodyState extends ConsumerState<_AssistantBody> {
         _committing = true;
         _setNote('Working…');
         final conv = ref.read(chatControllerProvider).conversationId;
-        final res =
-            await ref.read(chatRepositoryProvider).commit(name, args, conv: conv);
+        // Through the ledger, so a spoken "yes" to the same proposal cannot write it again.
+        final res = await ref.read(commitLedgerProvider.notifier).commit(conv, name, args);
         _committing = false;
         _committed = res.ok; // a failure leaves the button usable for a retry
         _setNote(res.message, error: !res.ok);
-      case CancelWrite():
+      case CancelWrite(:final action):
+        final c = confirmOf(widget.message);
+        if (c != null && c.name == action) {
+          ref.read(commitLedgerProvider.notifier)
+              .cancel(ref.read(chatControllerProvider).conversationId, c.name, c.args);
+        }
         _setNote('Cancelled.');
       case ActionFailed(:final message):
         _setNote(message, error: true);
@@ -153,6 +160,19 @@ class _AssistantBodyState extends ConsumerState<_AssistantBody> {
     final m = widget.message;
     final theme = Theme.of(context);
     final text = m.visibleContent(rendered: _rendered);
+    // Answered by voice? Say so here too — the genui surface cannot retire its own buttons.
+    final c = confirmOf(m);
+    final conv = ref.watch(chatControllerProvider.select((s) => s.conversationId));
+    final key = c == null ? null : CommitLedger.keyFor(conv, c.name, c.args);
+    final spoken = key == null ? null : ref.watch(commitLedgerProvider.select((l) => l[key]));
+    final note = _note.isNotEmpty
+        ? _note
+        : switch (spoken?.phase) {
+            CommitPhase.working => 'Working…',
+            CommitPhase.done => spoken!.message.isEmpty ? 'Done.' : spoken.message,
+            CommitPhase.cancelled => 'Cancelled.',
+            null => '',
+          };
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -174,11 +194,11 @@ class _AssistantBodyState extends ConsumerState<_AssistantBody> {
         // The legacy card, and ONLY when no surface drew one. A confirm-only turn has no prose
         // at all, so this card is the whole message.
         if (m.confirm != null && !_rendered) ConfirmCard(proposal: m.confirm!),
-        if (_note.isNotEmpty)
+        if (note.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(
-              _note,
+              note,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: _noteIsError
                     ? theme.colorScheme.error

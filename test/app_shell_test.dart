@@ -3,18 +3,28 @@
 // Note: pump(duration), never pumpAndSettle — the voice orb breathes on a repeating clock,
 // so the tree never settles by design.
 
+import 'package:docsync_app/core/providers.dart';
 import 'package:docsync_app/features/chat/controller/chat_controller.dart';
 import 'package:docsync_app/features/home/view/app_shell.dart';
+import 'package:docsync_app/features/voice/controller/voice_session.dart';
+import 'package:docsync_app/features/voice/controller/wake_word.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/scripted_chat_repository.dart';
+import 'support/voice_fakes.dart';
 
 Future<void> pumpShell(WidgetTester tester) async {
+  SharedPreferences.setMockInitialValues({});
+  final prefs = await SharedPreferences.getInstance();
   await tester.pumpWidget(ProviderScope(
     overrides: [
       chatRepositoryProvider.overrideWithValue(ScriptedChatRepository(const [])),
+      sharedPreferencesProvider.overrideWithValue(prefs),
+      audioCaptureProvider.overrideWithValue(FakeCapture(const [])),
+      wakeWordEngineProvider.overrideWithValue(FakeWakeEngine()),
     ],
     child: const MaterialApp(home: AppShell()),
   ));

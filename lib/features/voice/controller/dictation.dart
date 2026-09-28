@@ -44,7 +44,7 @@ class Dictation {
     final ended = _ended = Completer<void>();
     StreamSubscription<Uint8List>? sub;
     try {
-      final stream = await _capture.start();
+      final stream = await _capture.start(owner: this);
       sub = stream.listen(
         (chunk) {
           if (vad.done) return;
@@ -61,7 +61,7 @@ class Dictation {
       await ended.future;
     } finally {
       await sub?.cancel();
-      await _capture.stop();
+      await _capture.stop(owner: this);
       _vad = null;
       _ended = null;
     }

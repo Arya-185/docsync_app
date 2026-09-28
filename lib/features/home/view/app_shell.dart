@@ -7,6 +7,8 @@ import '../../chat/view/chat_screen.dart';
 import '../../recent/view/recent_screen.dart';
 import '../../search/view/search_screen.dart';
 import '../../settings/view/settings_screen.dart';
+import '../../voice/controller/voice_session.dart';
+import '../../voice/controller/wake_word.dart';
 import '../../voice/view/voice_screen.dart';
 
 /// The signed-in app: a header (logo, DocSync wordmark, search, settings) over three tabs —
@@ -24,7 +26,14 @@ class AppShell extends ConsumerStatefulWidget {
 class _AppShellState extends ConsumerState<AppShell> {
   int _index = 0;
 
-  void _go(int i) => setState(() => _index = i);
+  void _go(int i) {
+    if (i == _index) return;
+    // Voice is for the Voice tab: leaving it releases the mic and stops any reply mid-sentence,
+    // and the wake word only listens while it is on screen.
+    if (_index == 0) ref.read(voiceSessionProvider.notifier).cancel();
+    ref.read(voiceForegroundProvider.notifier).setTabVisible(i == 0);
+    setState(() => _index = i);
+  }
 
   void _openSearch() {
     Navigator.of(context).push(MaterialPageRoute(

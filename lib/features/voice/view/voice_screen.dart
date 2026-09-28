@@ -8,6 +8,7 @@ import '../../chat/view/widgets/activity_trail.dart';
 import '../../chat/view/widgets/chat_bubble.dart';
 import '../../settings/controller/settings_controller.dart';
 import '../controller/voice_session.dart';
+import '../controller/wake_word.dart';
 import 'widgets/mic_orb.dart';
 
 /// The voice-first home: one big orb, what you said, what it is doing, and the answer — spoken.
@@ -25,7 +26,30 @@ class VoiceScreen extends ConsumerStatefulWidget {
   ConsumerState<VoiceScreen> createState() => _VoiceScreenState();
 }
 
-class _VoiceScreenState extends ConsumerState<VoiceScreen> {
+class _VoiceScreenState extends ConsumerState<VoiceScreen> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /* Voice is foreground-only: the mic and the speaker are released the moment the app is
+     not on screen. A phone that keeps listening in someone's pocket is the one thing this
+     feature must never do. */
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState s) {
+    final away = s == AppLifecycleState.paused || s == AppLifecycleState.inactive ||
+        s == AppLifecycleState.hidden;
+    if (away) ref.read(voiceSessionProvider.notifier).cancel();
+    ref.read(voiceForegroundProvider.notifier).setResumed(s == AppLifecycleState.resumed);
+  }
+
   static const _suggestions = [
     'Which clients have pending GST filings?',
     'Remind me to call Amit Traders tomorrow at 11',
@@ -43,6 +67,7 @@ class _VoiceScreenState extends ConsumerState<VoiceScreen> {
   @override
   Widget build(BuildContext context) {
     final v = ref.watch(voiceSessionProvider);
+    ref.watch(wakeWordProvider); // keeps the wake-word listener alive while this screen exists
     final stopping = ref.watch(chatControllerProvider.select((s) => s.stopping));
     final mode = switch (v.phase) {
       VoicePhase.idle => OrbMode.idle,
@@ -230,16 +255,27 @@ class _Note extends StatelessWidget {
 }
 
 /// "Listening…" / "Working on it — tap to stop" under the orb.
-class _StatusPill extends StatelessWidget {
+class _StatusPill extends ConsumerWidget {
   const _StatusPill({required this.mode, this.stopping = false, this.compact = false});
   final OrbMode mode;
   final bool stopping;
   final bool compact;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final wakeState = ref.watch(wakeWordProvider);
+    final wake = wakeState.status;
+    final listenFor = ref.watch(voiceSessionProvider.select((v) => v.listenFor));
     final (String text, Color dot) = switch (mode) {
-      OrbMode.listening => ('Listening…  tap to stop', Ds.red),
+      OrbMode.listening => switch (listenFor) {
+          ListenFor.question => ('Listening…  tap when done', Ds.red),
+          ListenFor.followUp => ('Anything else? I\'m listening', Ds.red),
+          ListenFor.confirm => ('Say yes or no', Ds.amber),
+          ListenFor.outboundCancel => ('Say "cancel" to stop it', Ds.amber),
+          ListenFor.choice => ('Say which one', Ds.amber),
+        },
+      OrbMode.idle when wake == WakeWordStatus.listening =>
+        ('Say "${wakeState.phrase}" or tap the orb', Ds.green),
       OrbMode.thinking => (stopping ? 'Stopping…' : 'Working on it — tap to stop', Ds.blue),
       OrbMode.speaking => ('Speaking — tap to stop', Ds.indigo),
       OrbMode.idle => (compact ? 'Tap to ask a follow-up' : 'Tap the orb to speak', Ds.green),

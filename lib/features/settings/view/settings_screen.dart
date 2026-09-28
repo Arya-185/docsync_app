@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/design/tokens.dart';
 import '../../auth/controller/auth_controller.dart';
+import '../../voice/controller/wake_word.dart';
 import '../controller/settings_controller.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -66,8 +67,23 @@ class SettingsScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
+                const Divider(height: 1),
+                SwitchListTile(
+                  title: const Text('Keep listening after a reply'),
+                  subtitle: const Text('Ask a follow-up without tapping'),
+                  value: settings.followUp,
+                  onChanged: ctrl.setFollowUp,
+                ),
+                SwitchListTile(
+                  title: const Text('Interrupt by speaking'),
+                  subtitle: const Text('Talk over a reply to stop it and ask something else'),
+                  value: settings.bargeIn,
+                  onChanged: ctrl.setBargeIn,
+                ),
               ],
             ),
+            const SizedBox(height: Ds.s4),
+            const _WakeSection(),
             const SizedBox(height: Ds.s6),
             SizedBox(
               height: 52,
@@ -86,6 +102,58 @@ class SettingsScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _WakeSection extends ConsumerWidget {
+  const _WakeSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsControllerProvider);
+    final ctrl = ref.read(settingsControllerProvider.notifier);
+    final wake = ref.watch(wakeWordProvider);
+    final status = switch (wake.status) {
+      WakeWordStatus.off => 'Off',
+      WakeWordStatus.paused => 'Listens while the Voice tab is open',
+      WakeWordStatus.starting => 'Starting…',
+      WakeWordStatus.listening => 'Listening for “${wake.phrase}”',
+      WakeWordStatus.unavailable => 'Not available on this phone — tap the orb instead',
+    };
+    return _Section(
+      title: 'Wake word',
+      footer: 'Only while DocSync is open on the Voice tab. Detection runs on the phone; '
+          'nothing is sent until you have said the phrase.',
+      children: [
+        SwitchListTile(
+          title: Text('Say “${wake.phrase}” to start'),
+          subtitle: Text(status),
+          value: settings.wakeWord,
+          onChanged: ctrl.setWakeWord,
+        ),
+        if (settings.wakeWord)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Row(
+              children: [
+                const Text('Sensitivity'),
+                Expanded(
+                  child: Slider(
+                    value: settings.wakeSensitivity,
+                    divisions: 10,
+                    label: settings.wakeSensitivity < 0.35
+                        ? 'Strict'
+                        : settings.wakeSensitivity > 0.65
+                            ? 'Eager'
+                            : 'Balanced',
+                    onChanged: ctrl.setWakeSensitivity,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }
