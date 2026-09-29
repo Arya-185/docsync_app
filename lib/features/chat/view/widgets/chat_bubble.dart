@@ -12,6 +12,7 @@ import '../../controller/chat_controller.dart';
 import '../../controller/commit_ledger.dart';
 import '../../model/a2ui_actions.dart';
 import '../../model/chat_models.dart';
+import '../web_page_screen.dart';
 import 'a2ui_surface_view.dart';
 import 'confirm_card.dart';
 
@@ -150,6 +151,9 @@ class _AssistantBodyState extends ConsumerState<_AssistantBody> {
               .cancel(ref.read(chatControllerProvider).conversationId, c.name, c.args);
         }
         _setNote('Cancelled.');
+      case OpenPage(:final url):
+        _setNote('');
+        await WebPageScreen.push(context, url);
       case ActionFailed(:final message):
         _setNote(message, error: true);
     }

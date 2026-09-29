@@ -181,5 +181,6 @@ String describeAction(A2uiAction a) => switch (a) {
       SendChat(:final text) => 'send: $text',
       CommitWrite(:final action, :final args) => 'commit: $action ${jsonEncode(args)}',
       CancelWrite(:final action) => 'cancel: $action',
+      OpenPage(:final url) => 'open: $url',
       ActionFailed(:final message) => 'failed: $message',
     };

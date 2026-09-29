@@ -17,6 +17,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:docsync_app/features/chat/model/a2ui_actions.dart';
+import 'package:docsync_app/features/chat/model/a2ui_navigate.dart';
 import 'package:docsync_app/features/chat/view/widgets/a2ui_surface_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -59,6 +60,7 @@ void main() {
       'choice',
       'undo',
       'next_steps',
+      'link',
     };
     final present = fixtures.keys.toSet();
     expect(expected.difference(present), isEmpty,
@@ -248,6 +250,28 @@ void main() {
       await tester.tap(find.text('Mark it paid'));
       await tester.pumpAndSettle();
       expect(actions.single, const SendChat('Use next: mark invoice #65 paid.'));
+    });
+  });
+
+  group('the link card', () {
+    testWidgets('draws its lines and opens the page it names', (tester) async {
+      final actions = await pump(tester, 'link');
+      expect(find.text('Status: pending'), findsOneWidget);
+      await tester.tap(find.text('Open page'));
+      await tester.pumpAndSettle();
+      expect(actions.single, const OpenPage('open.php?kind=task&id=512'));
+    });
+
+    test('the page screen is titled by what it opens', () {
+      expect(pageTitle('open.php?kind=task&id=512'), 'Task #512');
+      expect(pageTitle('open.php?kind=client_address&id=12'), 'Billing address');
+    });
+
+    test('only open.php links are followed', () {
+      const refused = ActionFailed('That link is not one this app follows.');
+      expect(routeA2uiAction('docsync.navigate', {'url': 'https://evil.example/'}), refused);
+      expect(routeA2uiAction('docsync.navigate', {'url': 'open.php?kind=staff&id=1'}), refused);
+      expect(routeA2uiAction('docsync.navigate', {'url': 'open.php?kind=task&id=0'}), refused);
     });
   });
 

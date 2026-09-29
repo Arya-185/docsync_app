@@ -10,7 +10,7 @@ import '../model/wav.dart';
 import 'voice_session.dart';
 
 final dictationProvider = Provider<Dictation>(
-  (ref) => Dictation(ref.read(audioCaptureProvider), ref.read(speechRepositoryProvider)),
+  (ref) => Dictation(ref.read(audioCaptureProvider), ref.watch(speechRepositoryProvider)),
 );
 
 /// Speak into a text field: record one utterance, transcribe it on the server, return the text.

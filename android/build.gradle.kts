@@ -27,6 +27,16 @@ subprojects {
                 compileSdk = 36
             }
         }
+        // ...and some (vosk_flutter_service) still compile against android-33, which their own
+        // androidx dependencies refuse. Raise those too — after the module's own script has run,
+        // or its `compileSdk 33` would overwrite this.
+        project.extensions.configure<com.android.build.api.variant.LibraryAndroidComponentsExtension>("androidComponents") {
+            finalizeDsl { ext ->
+                if (ext.compileSdk != null && ext.compileSdk!! < 34) {
+                    ext.compileSdk = 36
+                }
+            }
+        }
     }
 }
 

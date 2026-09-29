@@ -276,7 +276,9 @@ class _InputBar extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            MicButton(controller: controller, enabled: !sending),
+            // Dictation ends when the user stops talking (or taps the mic again); the words are
+            // then sent straight away, the way a spoken question is on the Voice tab.
+            MicButton(controller: controller, enabled: !sending, onFinal: (_) => onSend()),
             Expanded(
               child: TextField(
                 controller: controller,

@@ -80,6 +80,18 @@ class SettingsScreen extends ConsumerWidget {
                   value: settings.bargeIn,
                   onChanged: ctrl.setBargeIn,
                 ),
+                SwitchListTile(
+                  title: const Text('Phone voice for replies'),
+                  subtitle: const Text('Free and offline. Off uses the DocSync server voice'),
+                  value: settings.deviceVoice,
+                  onChanged: ctrl.setDeviceVoice,
+                ),
+                SwitchListTile(
+                  title: const Text('Understand speech on the phone'),
+                  subtitle: const Text('Offline and private. Off uses the DocSync server, which is better with Hinglish'),
+                  value: settings.deviceStt,
+                  onChanged: ctrl.setDeviceStt,
+                ),
               ],
             ),
             const SizedBox(height: Ds.s4),

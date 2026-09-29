@@ -10,6 +10,7 @@ import '../../chat/model/a2ui_actions.dart';
 import '../../chat/model/chat_models.dart';
 import '../../settings/controller/settings_controller.dart';
 import '../model/audio_capture.dart';
+import '../model/device_tts.dart';
 import '../model/intent_lexicon.dart';
 import '../model/speech_repository.dart';
 import '../model/speech_text.dart';
@@ -17,6 +18,7 @@ import '../model/tts_player.dart';
 import '../model/vad.dart';
 import '../model/voice_choices.dart';
 import '../model/voice_picker_matcher.dart';
+import '../model/vosk_speech.dart';
 import '../model/wav.dart';
 
 final audioCaptureProvider = Provider<AudioCapture>((ref) {
@@ -25,11 +27,18 @@ final audioCaptureProvider = Provider<AudioCapture>((ref) {
   return c;
 });
 
-final speechRepositoryProvider =
-    Provider<SpeechRepository>((ref) => SpeechRepository(ref.watch(apiClientProvider)));
+/// Speech-to-text on the phone (Vosk) unless the user chose the server's Sarvam recogniser.
+final speechRepositoryProvider = Provider<SpeechRepository>((ref) {
+  final api = ref.watch(apiClientProvider);
+  return ref.watch(settingsControllerProvider.select((s) => s.deviceStt))
+      ? OnDeviceSpeechRepository(api)
+      : SpeechRepository(api);
+});
 
 final speechPlayerProvider = Provider<SpeechPlayer>((ref) {
-  final p = JustAudioSpeechPlayer();
+  // The phone's own voice (free, offline) unless the user chose the server's Sarvam voice.
+  final device = ref.watch(settingsControllerProvider.select((s) => s.deviceVoice));
+  final SpeechPlayer p = device ? DeviceSpeechPlayer() : JustAudioSpeechPlayer();
   ref.onDispose(p.dispose);
   return p;
 });
@@ -406,7 +415,12 @@ class VoiceSession extends Notifier<VoiceState> {
     for (final s in sentences) {
       if (s.trim().isEmpty) continue;
       _enqueued++;
-      _player.enqueue(_speech.synthesize(s, lang: _speakLang));
+      final player = _player;
+      if (player is DeviceSpeechPlayer) {
+        player.enqueueText(s, lang: _speakLang);
+      } else {
+        player.enqueue(_speech.synthesize(s, lang: _speakLang));
+      }
       if (state.phase == VoicePhase.thinking) {
         state = state.copyWith(phase: VoicePhase.speaking);
         _startBargeIn();

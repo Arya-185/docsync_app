@@ -6,10 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../settings/controller/settings_controller.dart';
 import '../model/audio_capture.dart';
 import '../model/wake_word_engine.dart';
+import '../model/vosk_speech.dart';
 import 'voice_session.dart';
 
 final wakeWordEngineProvider = Provider<WakeWordEngine>((ref) {
-  final e = OpenWakeWordEngine();
+  // "Hey DocSync": a trained openWakeWord model if bundled, else Vosk (no training needed).
+  final e = AutoWakeWordEngine();
   ref.onDispose(e.dispose);
   return e;
 });
@@ -148,17 +150,23 @@ class WakeWordController extends Notifier<WakeState> {
       if (_model == null) {
         _set(WakeWordStatus.starting);
         _model = await _engine.init();
+        if (!ref.mounted) return;
         if (_model == null) {
           _unavailable = true;
           _set(WakeWordStatus.unavailable);
           return;
         }
       }
-      if (!_shouldRun || !await _capture.hasPermission()) {
+      final capture = _capture;
+      if (!_shouldRun || !await capture.hasPermission() || !ref.mounted || !_shouldRun) {
         _set(WakeWordStatus.paused);
         return;
       }
-      final stream = await _capture.start(owner: this);
+      final stream = await capture.start(owner: this);
+      if (!ref.mounted) {
+        await capture.stop(owner: this);
+        return;
+      }
       _fill = 0;
       _framesSinceStart = 0;
       _hits = 0;
@@ -173,9 +181,11 @@ class WakeWordController extends Notifier<WakeState> {
   Future<void> _stop() async {
     if (!_running && _mic == null) return;
     _running = false;
+    // Read before the first await: the provider can be disposed during the gap.
+    final capture = _capture;
     await _mic?.cancel();
     _mic = null;
-    await _capture.stop(owner: this);
+    await capture.stop(owner: this);
   }
 
   void _onChunk(Uint8List chunk) {

@@ -1482,5 +1482,72 @@
                 ]
             }
         }
+    ],
+    "link": [
+        {
+            "version": "v0.9",
+            "createSurface": {
+                "surfaceId": "link_task_512",
+                "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
+            }
+        },
+        {
+            "version": "v0.9",
+            "updateComponents": {
+                "surfaceId": "link_task_512",
+                "components": [
+                    {
+                        "id": "root",
+                        "component": "Card",
+                        "child": "card_body"
+                    },
+                    {
+                        "id": "card_body",
+                        "component": "Column",
+                        "children": [
+                            "title",
+                            "line0",
+                            "line1",
+                            "open"
+                        ]
+                    },
+                    {
+                        "id": "title",
+                        "component": "Text",
+                        "text": "Task #512 — GST refund for Ahana"
+                    },
+                    {
+                        "id": "line0",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Status: pending"
+                    },
+                    {
+                        "id": "line1",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Due 2026-10-15"
+                    },
+                    {
+                        "id": "open",
+                        "component": "Button",
+                        "child": "open_label",
+                        "action": {
+                            "event": {
+                                "name": "docsync.navigate",
+                                "context": {
+                                    "url": "open.php?kind=task&id=512"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "open_label",
+                        "component": "Text",
+                        "text": "Open page"
+                    }
+                ]
+            }
+        }
     ]
 }

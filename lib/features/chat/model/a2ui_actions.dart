@@ -14,6 +14,8 @@ library;
 
 import 'dart:convert';
 
+import 'a2ui_navigate.dart';
+
 /// What the app should do in response to a widget action.
 sealed class A2uiAction {
   const A2uiAction();
@@ -54,6 +56,20 @@ class CancelWrite extends A2uiAction {
   int get hashCode => action.hashCode;
   @override
   String toString() => 'CancelWrite($action)';
+}
+
+/// Open a DocSync web page (a link card's "Open page"). [url] is the relative
+/// `open.php?kind=…&id=…` the server built, already checked against the allow-list.
+class OpenPage extends A2uiAction {
+  const OpenPage(this.url);
+  final String url;
+
+  @override
+  bool operator ==(Object other) => other is OpenPage && other.url == url;
+  @override
+  int get hashCode => url.hashCode;
+  @override
+  String toString() => 'OpenPage($url)';
 }
 
 /// Something went wrong, or the verb is not one this build knows.
@@ -135,6 +151,14 @@ A2uiAction routeA2uiAction(String? name, Map<String, Object?> context) {
         return const ActionFailed('Could not read the confirmation details.');
       }
       return CommitWrite(_str(context['action'], ''), args);
+
+    // A link card's "Open page" (server M5): the web page, in-app, on the app's session.
+    case 'docsync.navigate':
+      final url = context['url'];
+      if (!isOpenUrl(url)) {
+        return const ActionFailed('That link is not one this app follows.');
+      }
+      return OpenPage(url as String);
 
     case 'docsync.cancel':
       return CancelWrite(_str(context['action'], ''));

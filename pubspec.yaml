@@ -50,6 +50,9 @@ dependencies:
   just_audio: ^0.10.6
   audio_session: ^0.2.4
   open_wake_word: ^0.3.0
+  webview_flutter: ^4.14.1
+  flutter_tts: ^4.2.5
+  vosk_flutter_service: ^0.1.2
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -88,6 +91,8 @@ flutter:
     # openWakeWord: the two shared feature models + the wake phrase. A trained
     # hey_docsync.onnx dropped in here is picked up automatically (tool/wakeword/README.md).
     - assets/wakeword/
+    # Vosk: offline "Hey DocSync" wake phrase + on-device speech-to-text (small Indian English).
+    - assets/vosk/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

@@ -24,8 +24,10 @@ class AppSettings {
     this.voiceLang = VoiceLang.auto,
     this.followUp = true,
     this.bargeIn = true,
-    this.wakeWord = false,
+    this.wakeWord = true,
     this.wakeSensitivity = 0.5,
+    this.deviceVoice = true,
+    this.deviceStt = true,
   });
   final VoiceLang voiceLang;
 
@@ -41,12 +43,22 @@ class AppSettings {
   /// 0..1; higher wakes more easily (and falsely more often).
   final double wakeSensitivity;
 
+  /// Speak replies with the phone's own text-to-speech (free, offline) rather than the
+  /// server's Sarvam voice.
+  final bool deviceVoice;
+
+  /// Recognise speech on the phone (Vosk, offline) rather than with the server's Sarvam
+  /// recogniser. Private and free; weaker on Hinglish and unusual names.
+  final bool deviceStt;
+
   AppSettings copyWith({
     VoiceLang? voiceLang,
     bool? followUp,
     bool? bargeIn,
     bool? wakeWord,
     double? wakeSensitivity,
+    bool? deviceVoice,
+    bool? deviceStt,
   }) =>
       AppSettings(
         voiceLang: voiceLang ?? this.voiceLang,
@@ -54,6 +66,8 @@ class AppSettings {
         bargeIn: bargeIn ?? this.bargeIn,
         wakeWord: wakeWord ?? this.wakeWord,
         wakeSensitivity: wakeSensitivity ?? this.wakeSensitivity,
+        deviceVoice: deviceVoice ?? this.deviceVoice,
+        deviceStt: deviceStt ?? this.deviceStt,
       );
 }
 
@@ -66,6 +80,8 @@ class SettingsController extends Notifier<AppSettings> {
   static const _kBargeIn = 'voice_barge_in';
   static const _kWakeWord = 'voice_wake_word';
   static const _kWakeSensitivity = 'voice_wake_sensitivity';
+  static const _kDeviceVoice = 'voice_device_tts';
+  static const _kDeviceStt = 'voice_device_stt';
 
   @override
   AppSettings build() {
@@ -76,8 +92,10 @@ class SettingsController extends Notifier<AppSettings> {
           .firstWhere((v) => v.name == saved, orElse: () => VoiceLang.auto),
       followUp: prefs.getBool(_kFollowUp) ?? true,
       bargeIn: prefs.getBool(_kBargeIn) ?? true,
-      wakeWord: prefs.getBool(_kWakeWord) ?? false,
+      wakeWord: prefs.getBool(_kWakeWord) ?? true,
       wakeSensitivity: (prefs.getDouble(_kWakeSensitivity) ?? 0.5).clamp(0.0, 1.0),
+      deviceVoice: prefs.getBool(_kDeviceVoice) ?? true,
+      deviceStt: prefs.getBool(_kDeviceStt) ?? true,
     );
   }
 
@@ -99,6 +117,16 @@ class SettingsController extends Notifier<AppSettings> {
   Future<void> setWakeWord(bool v) async {
     state = state.copyWith(wakeWord: v);
     await ref.read(sharedPreferencesProvider).setBool(_kWakeWord, v);
+  }
+
+  Future<void> setDeviceVoice(bool v) async {
+    state = state.copyWith(deviceVoice: v);
+    await ref.read(sharedPreferencesProvider).setBool(_kDeviceVoice, v);
+  }
+
+  Future<void> setDeviceStt(bool v) async {
+    state = state.copyWith(deviceStt: v);
+    await ref.read(sharedPreferencesProvider).setBool(_kDeviceStt, v);
   }
 
   Future<void> setWakeSensitivity(double v) async {
