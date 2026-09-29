@@ -143,9 +143,16 @@ class _A2uiSurfaceViewState extends State<A2uiSurfaceView> {
         for (final id in _order)
           Padding(
             padding: const EdgeInsets.only(top: 6),
-            child: Surface(
-              surfaceContext: _controller.contextFor(id),
-              actionDelegate: _DocSyncActionDelegate(widget.onAction),
+            // The full bubble width, so a card is as wide as the answer rather than its own text.
+            child: SizedBox(
+              width: double.infinity,
+              child: Theme(
+                data: surfaceTheme(theme),
+                child: Surface(
+                  surfaceContext: _controller.contextFor(id),
+                  actionDelegate: _DocSyncActionDelegate(widget.onAction),
+                ),
+              ),
             ),
           ),
         if (_error != null)
@@ -160,6 +167,40 @@ class _A2uiSurfaceViewState extends State<A2uiSurfaceView> {
       ],
     );
   }
+}
+
+/// The app's look for genui's basic widgets.
+///
+/// genui sets only colours and leaves shape, padding and alignment to the theme, and the stock
+/// Material 3 values suit a toolbar, not a card: a stadium button clipped a two-line row at its
+/// rounded ends, and a centred label read as a heading. So, only inside surfaces:
+/// - a row (a borderless button, the Card is its edge) fills the card and reads left to right;
+/// - other buttons are rounded rectangles like the rest of the app, flat;
+/// - cards stack with a little air between them.
+@visibleForTesting
+ThemeData surfaceTheme(ThemeData base) {
+  final rounded = RoundedRectangleBorder(borderRadius: BorderRadius.circular(10));
+  return base.copyWith(
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        // Not an infinite width: next-step chips are borderless buttons in a Row. A row button
+        // fills its card anyway, because a stretched List hands the Card a tight width.
+        minimumSize: const Size(0, 40),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        shape: rounded,
+      ),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        elevation: 0,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        shape: rounded.copyWith(side: BorderSide(color: base.colorScheme.outlineVariant)),
+      ),
+    ),
+    cardTheme: base.cardTheme.copyWith(margin: const EdgeInsets.symmetric(vertical: 3)),
+  );
 }
 
 /// Intercepts the `docsync.*` verbs before genui turns them into a model submission.

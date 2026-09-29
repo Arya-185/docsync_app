@@ -281,7 +281,19 @@ void main() {
       expect(find.text('Here are your to-dos:'), findsOneWidget);
       expect(find.text('File the GST return'), findsOneWidget);
       expect(find.text('Call Sharma'), findsOneWidget);
-      expect(find.text('priority=high, due_date=2026-09-25'), findsOneWidget);
+      expect(find.text('High priority · due 25 Sep 2026'), findsOneWidget);
+    });
+
+    testWidgets('every row is one full-width card, not a pill inside a card', (tester) async {
+      await pump(tester, 'list');
+      expect(find.byType(Card), findsNWidgets(2));
+      final w0 = tester.getSize(find.byType(Card).at(0)).width;
+      final w1 = tester.getSize(find.byType(Card).at(1)).width;
+      expect(w0, w1, reason: 'a stretched List draws every card at the same width');
+      expect(find.byType(ElevatedButton), findsNothing,
+          reason: 'a row is a borderless button; the Card is its only edge');
+      final row = tester.getSize(find.byType(TextButton).first).width;
+      expect(row, greaterThan(w0 - 40), reason: 'the tappable row fills its card');
     });
 
     testWidgets('tapping a row sends an ordinary chat turn naming its real id',
