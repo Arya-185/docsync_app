@@ -61,6 +61,7 @@ void main() {
       'undo',
       'next_steps',
       'link',
+      'facts',
     };
     final present = fixtures.keys.toSet();
     expect(expected.difference(present), isEmpty,
@@ -282,6 +283,15 @@ void main() {
       expect(find.text('File the GST return'), findsOneWidget);
       expect(find.text('Call Sharma'), findsOneWidget);
       expect(find.text('High priority · due 25 Sep 2026'), findsOneWidget);
+    });
+
+    testWidgets('a totals-only answer is one card of facts in words', (tester) async {
+      await pump(tester, 'facts');
+      expect(find.byType(Card), findsOneWidget);
+      expect(find.text('Billing'), findsOneWidget);
+      expect(find.text('Billed ₹2,89,869.86'), findsOneWidget);
+      expect(find.text('Outstanding ₹90,014.61'), findsOneWidget);
+      expect(find.textContaining('='), findsNothing);
     });
 
     testWidgets('every row is one full-width card, not a pill inside a card', (tester) async {

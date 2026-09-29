@@ -245,6 +245,9 @@ class _BubbleText extends StatelessWidget {
     return MarkdownBody(
       data: text,
       selectable: true,
+      // One newline is one line, as on the web. Server replies are line-per-fact (a client
+      // profile, a task header), and standard markdown ran them into one paragraph.
+      softLineBreak: true,
       styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
         p: base,
         listBullet: base,

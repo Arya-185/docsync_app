@@ -1567,5 +1567,63 @@
                 ]
             }
         }
+    ],
+    "facts": [
+        {
+            "version": "v0.9",
+            "createSurface": {
+                "surfaceId": "facts_billing_summary_70b23d98",
+                "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
+            }
+        },
+        {
+            "version": "v0.9",
+            "updateComponents": {
+                "surfaceId": "facts_billing_summary_70b23d98",
+                "components": [
+                    {
+                        "id": "root",
+                        "component": "Card",
+                        "child": "body"
+                    },
+                    {
+                        "id": "body",
+                        "component": "Column",
+                        "children": [
+                            "title",
+                            "f0",
+                            "f1",
+                            "f2",
+                            "f3"
+                        ]
+                    },
+                    {
+                        "id": "title",
+                        "component": "Text",
+                        "text": "Billing"
+                    },
+                    {
+                        "id": "f0",
+                        "component": "Text",
+                        "text": "Bills: 61"
+                    },
+                    {
+                        "id": "f1",
+                        "component": "Text",
+                        "text": "Billed ₹2,89,869.86"
+                    },
+                    {
+                        "id": "f2",
+                        "component": "Text",
+                        "text": "Collected ₹1,99,855.25"
+                    },
+                    {
+                        "id": "f3",
+                        "component": "Text",
+                        "text": "Outstanding ₹90,014.61"
+                    }
+                ]
+            }
+        }
     ]
 }
