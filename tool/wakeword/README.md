@@ -1,9 +1,10 @@
 # Training the "Hey DocSync" wake word
 
-The app ships openWakeWord's stock **"Hey Jarvis"** model so the wake word works today. A trained
-`hey_docsync.onnx` placed in `assets/wakeword/` replaces it automatically — the app checks for
-that file at start-up (`WakeModel.heyDocSync` in `lib/features/voice/model/wake_word_engine.dart`),
-and the Voice screen and Settings then say "Hey DocSync" instead. No code change needed.
+> **Not wired up at the moment.** The `open_wake_word` plugin (and its ONNX Runtime, ~16 MB of
+> native code per CPU type) and the `assets/wakeword/` models were removed to shrink the APK; the
+> app's wake word is Vosk-only (`lib/features/voice/model/vosk_speech.dart`). Using a model trained
+> with the steps below means adding `open_wake_word` back and an engine in `AutoWakeWordEngine`.
+> The removed engine and models are in the app's git history (before the APK-size commit).
 
 ## 1. Indian-voice clips (on this PC, ~2 minutes, a few rupees of Sarvam credit)
 

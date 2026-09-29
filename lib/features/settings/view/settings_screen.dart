@@ -4,7 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/design/tokens.dart';
 import '../../auth/controller/auth_controller.dart';
 import '../../voice/controller/wake_word.dart';
+import '../../voice/model/vosk_speech.dart';
 import '../controller/settings_controller.dart';
+
+/// Is the offline speech model in this build? It is left out for now to keep the APK small, and
+/// the switch and the wake-word line should say so rather than promise offline speech.
+final offlineSpeechBundledProvider = FutureProvider<bool>((ref) => VoskModels.instance.bundled());
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -86,12 +91,19 @@ class SettingsScreen extends ConsumerWidget {
                   value: settings.deviceVoice,
                   onChanged: ctrl.setDeviceVoice,
                 ),
-                SwitchListTile(
-                  title: const Text('Understand speech on the phone'),
-                  subtitle: const Text('Offline and private. Off uses the DocSync server, which is better with Hinglish'),
-                  value: settings.deviceStt,
-                  onChanged: ctrl.setDeviceStt,
-                ),
+                if (ref.watch(offlineSpeechBundledProvider).value ?? true)
+                  SwitchListTile(
+                    title: const Text('Understand speech on the phone'),
+                    subtitle: const Text('Offline and private. Off uses the DocSync server, which is better with Hinglish'),
+                    value: settings.deviceStt,
+                    onChanged: ctrl.setDeviceStt,
+                  )
+                else
+                  const ListTile(
+                    title: Text('Understand speech on the phone'),
+                    subtitle: Text('The offline speech model is not in this version, so the DocSync server hears you'),
+                    enabled: false,
+                  ),
               ],
             ),
             const SizedBox(height: Ds.s4),
@@ -131,7 +143,9 @@ class _WakeSection extends ConsumerWidget {
       WakeWordStatus.paused => 'Listens while the Voice tab is open',
       WakeWordStatus.starting => 'Starting…',
       WakeWordStatus.listening => 'Listening for “${wake.phrase}”',
-      WakeWordStatus.unavailable => 'Not available on this phone — tap the orb instead',
+      WakeWordStatus.unavailable => (ref.watch(offlineSpeechBundledProvider).value ?? true)
+          ? 'Not available on this phone — tap the orb instead'
+          : 'Needs the offline speech model, not in this version — tap the orb instead',
     };
     return _Section(
       title: 'Wake word',

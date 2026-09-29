@@ -26,6 +26,16 @@ android {
         versionName = flutter.versionName
     }
 
+    // Native libraries are compressed inside the APK (46 -> 17 MB for arm64) and unpacked at
+    // install time, instead of stored raw so Android can load them in place. That makes the file
+    // people download far smaller, at the cost of a little more storage once installed. With an
+    // App Bundle on the Play Store this matters less: Play compresses the download itself.
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.

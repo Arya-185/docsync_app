@@ -161,7 +161,7 @@ class FakeWakeEngine implements WakeWordEngine {
   @override
   Future<WakeModel?> init() async {
     inits++;
-    return available ? WakeModel.heyJarvis : null;
+    return available ? WakeModel.heyDocSync : null;
   }
 
   @override

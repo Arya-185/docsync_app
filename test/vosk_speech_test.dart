@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:docsync_app/features/voice/model/vosk_speech.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -26,6 +28,21 @@ void main() {
       expect(VoskWakeWordEngine.grammar, contains('hey doc sync'));
       expect(VoskWakeWordEngine.grammar, contains('[unk]'));
       expect(VoskWakeWordEngine.grammar.any((g) => g.contains('docsync')), isFalse);
+    });
+  });
+
+  group('without the bundled model (the APK-size build)', () {
+    TestWidgetsFlutterBinding.ensureInitialized();
+
+    test('the build reports the offline model as missing', () async {
+      expect(await VoskModels.instance.bundled(), isFalse);
+    });
+
+    test('the wake engine is simply unavailable, never an error', () async {
+      final engine = AutoWakeWordEngine();
+      expect(await engine.init(), isNull);
+      expect(engine.process(Int16List(1280)), 0);
+      engine.dispose();
     });
   });
 

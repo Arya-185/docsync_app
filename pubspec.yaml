@@ -49,7 +49,6 @@ dependencies:
   record: ^7.1.1
   just_audio: ^0.10.6
   audio_session: ^0.2.4
-  open_wake_word: ^0.3.0
   webview_flutter: ^4.14.1
   flutter_tts: ^4.2.5
   vosk_flutter_service: ^0.1.2
@@ -88,11 +87,10 @@ flutter:
 
   assets:
     - assets/images/docsync_logo.png
-    # openWakeWord: the two shared feature models + the wake phrase. A trained
-    # hey_docsync.onnx dropped in here is picked up automatically (tool/wakeword/README.md).
-    - assets/wakeword/
-    # Vosk: offline "Hey DocSync" wake phrase + on-device speech-to-text (small Indian English).
-    - assets/vosk/
+    # No speech models are bundled (they were 39 MB of a 173 MB APK). The Vosk model
+    # (vosk-model-small-en-in-0.4.zip, in git history at 687802f) is meant to be downloaded on
+    # first use once it is hosted; until then the wake word is off and speech goes to the server.
+    # To bundle it again: put the zip in assets/vosk/ and list `- assets/vosk/` here.
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

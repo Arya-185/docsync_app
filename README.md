@@ -70,7 +70,10 @@ set→download under an async lock to avoid cross-client races.
 flutter pub get
 dart run flutter_launcher_icons   # (re)generate launcher icons if the logo changes
 flutter run                       # pick an Android device/emulator
-flutter build apk
+flutter build apk --release --split-per-abi
+# -> build/app/outputs/flutter-apk/app-arm64-v8a-release.apk   (almost every phone)
+#    app-armeabi-v7a-release.apk (old 32-bit phones), app-x86_64-release.apk (emulator)
+# For the Play Store build an App Bundle instead: flutter build appbundle
 ```
 
 ## Notes

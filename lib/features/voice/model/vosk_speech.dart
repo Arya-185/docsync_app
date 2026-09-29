@@ -9,8 +9,12 @@ import 'package:vosk_flutter_service/vosk_flutter_service.dart';
 import 'speech_repository.dart';
 import 'wake_word_engine.dart';
 
-/// Offline speech on the phone with Vosk (small Indian-English model, bundled): the wake phrase
-/// and the transcription of what is said after it. Nothing leaves the phone for either.
+/// Offline speech on the phone with Vosk (small Indian-English model): the wake phrase and the
+/// transcription of what is said after it. Nothing leaves the phone for either.
+///
+/// The model is NOT bundled at the moment (36 MB of the APK; pubspec.yaml says how to put it
+/// back). Without it every Vosk path reports itself unavailable: the wake word is off and speech
+/// goes to the server recogniser. Loading from a download is the planned replacement.
 ///
 /// One model, loaded once and shared: the model is the expensive part (tens of MB unpacked);
 /// recognisers over it are cheap.
@@ -20,11 +24,26 @@ class VoskModels {
 
   static const asset = 'assets/vosk/vosk-model-small-en-in-0.4.zip';
 
-  final VoskFlutterPlugin _vosk = VoskFlutterPlugin.instance();
+  // Late: creating the plugin loads libvosk, which throws where the library is absent. Asking
+  // bundled() (Settings does) must not need the native library at all.
+  late final VoskFlutterPlugin _vosk = VoskFlutterPlugin.instance();
   Future<Model>? _model;
+  Future<bool>? _bundled;
+
+  /// Is the model in this build? Read from the asset manifest, so asking costs nothing even
+  /// when the 36 MB zip is there.
+  Future<bool> bundled() => _bundled ??= () async {
+        try {
+          final m = await AssetManifest.loadFromAssetBundle(rootBundle);
+          return m.listAssets().contains(asset);
+        } catch (_) {
+          return false;
+        }
+      }();
 
   /// The loaded model. The first call unpacks the zip into app storage (a few seconds, once).
   Future<Model> model() => _model ??= () async {
+        if (!await bundled()) throw StateError('The offline speech model is not in this build.');
         final path = await ModelLoader().loadFromAssets(asset);
         return _vosk.createModel(path);
       }();
@@ -113,22 +132,14 @@ class VoskWakeWordEngine implements WakeWordEngine {
   }
 }
 
-/// The wake engine the app uses: a TRAINED openWakeWord "Hey DocSync" model if one has been
-/// bundled (tool/wakeword/README.md), otherwise Vosk listening for the phrase. Never "Hey Jarvis".
+/// The wake engine the app uses: Vosk listening for the phrase, or none (null from [init]) when
+/// the Vosk model is not available. Kept as the one seam where another engine would plug in.
 class AutoWakeWordEngine implements WakeWordEngine {
   WakeWordEngine? _inner;
 
   @override
   Future<WakeModel?> init() async {
     if (_inner != null) return _inner!.init();
-    if (await _hasAsset(WakeModel.heyDocSync.asset)) {
-      final oww = OpenWakeWordEngine();
-      final m = await oww.init();
-      if (m != null) {
-        _inner = oww;
-        return m;
-      }
-    }
     final vosk = VoskWakeWordEngine();
     final m = await vosk.init();
     if (m != null) _inner = vosk;
@@ -142,15 +153,6 @@ class AutoWakeWordEngine implements WakeWordEngine {
   void dispose() {
     _inner?.dispose();
     _inner = null;
-  }
-
-  static Future<bool> _hasAsset(String path) async {
-    try {
-      await rootBundle.load(path);
-      return true;
-    } catch (_) {
-      return false;
-    }
   }
 }
 
@@ -169,8 +171,10 @@ class OnDeviceSpeechRepository extends SpeechRepository {
     final Recognizer rec;
     try {
       rec = await VoskModels.instance.recognizer();
-    } catch (e) {
-      throw SpeechException(SpeechError.unavailable, '$e');
+    } catch (_) {
+      // No model in this build (or it failed to load): the server recogniser hears it instead,
+      // so dictation and voice keep working. Settings says so next to the switch.
+      return super.transcribe(wav, lang: lang, cancel: cancel);
     }
     try {
       const chunk = 8000; // 0.25 s
