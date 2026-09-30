@@ -22,6 +22,10 @@ enum SpeechError {
 
   /// Network or upstream failure; worth trying again.
   failed,
+
+  /// The phone's own (Google) recogniser is missing or broken; the server recogniser can
+  /// hear the next utterance instead.
+  recognizer,
 }
 
 class SpeechException implements Exception {
@@ -36,6 +40,7 @@ class SpeechException implements Exception {
         SpeechError.quota => 'Voice is out of credits right now. You can still type.',
         SpeechError.noAudio => 'I didn\'t hear anything.',
         SpeechError.failed => 'Voice didn\'t go through. Please try again.',
+        SpeechError.recognizer => 'The phone\'s speech recogniser isn\'t working.',
       };
 
   @override

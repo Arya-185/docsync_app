@@ -91,6 +91,13 @@ class SettingsScreen extends ConsumerWidget {
                   value: settings.deviceVoice,
                   onChanged: ctrl.setDeviceVoice,
                 ),
+                SwitchListTile(
+                  title: const Text('Google speech recognition'),
+                  subtitle: const Text(
+                      'Most accurate, and your words appear as you speak. Off, or on a phone without it, the option below hears you'),
+                  value: settings.googleStt,
+                  onChanged: ctrl.setGoogleStt,
+                ),
                 if (ref.watch(offlineSpeechBundledProvider).value ?? true)
                   SwitchListTile(
                     title: const Text('Understand speech on the phone'),

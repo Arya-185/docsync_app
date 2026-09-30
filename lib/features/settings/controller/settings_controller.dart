@@ -28,6 +28,7 @@ class AppSettings {
     this.wakeSensitivity = 0.5,
     this.deviceVoice = true,
     this.deviceStt = true,
+    this.googleStt = true,
   });
   final VoiceLang voiceLang;
 
@@ -51,6 +52,10 @@ class AppSettings {
   /// recogniser. Private and free; weaker on Hinglish and unusual names.
   final bool deviceStt;
 
+  /// Hear speech with the phone's Google recogniser (most accurate; words appear as they are
+  /// said). Off, or on a phone without one, the recogniser above is used.
+  final bool googleStt;
+
   AppSettings copyWith({
     VoiceLang? voiceLang,
     bool? followUp,
@@ -59,6 +64,7 @@ class AppSettings {
     double? wakeSensitivity,
     bool? deviceVoice,
     bool? deviceStt,
+    bool? googleStt,
   }) =>
       AppSettings(
         voiceLang: voiceLang ?? this.voiceLang,
@@ -68,6 +74,7 @@ class AppSettings {
         wakeSensitivity: wakeSensitivity ?? this.wakeSensitivity,
         deviceVoice: deviceVoice ?? this.deviceVoice,
         deviceStt: deviceStt ?? this.deviceStt,
+        googleStt: googleStt ?? this.googleStt,
       );
 }
 
@@ -82,6 +89,7 @@ class SettingsController extends Notifier<AppSettings> {
   static const _kWakeSensitivity = 'voice_wake_sensitivity';
   static const _kDeviceVoice = 'voice_device_tts';
   static const _kDeviceStt = 'voice_device_stt';
+  static const _kGoogleStt = 'voice_google_stt';
 
   @override
   AppSettings build() {
@@ -96,6 +104,7 @@ class SettingsController extends Notifier<AppSettings> {
       wakeSensitivity: (prefs.getDouble(_kWakeSensitivity) ?? 0.5).clamp(0.0, 1.0),
       deviceVoice: prefs.getBool(_kDeviceVoice) ?? true,
       deviceStt: prefs.getBool(_kDeviceStt) ?? true,
+      googleStt: prefs.getBool(_kGoogleStt) ?? true,
     );
   }
 
@@ -127,6 +136,11 @@ class SettingsController extends Notifier<AppSettings> {
   Future<void> setDeviceStt(bool v) async {
     state = state.copyWith(deviceStt: v);
     await ref.read(sharedPreferencesProvider).setBool(_kDeviceStt, v);
+  }
+
+  Future<void> setGoogleStt(bool v) async {
+    state = state.copyWith(googleStt: v);
+    await ref.read(sharedPreferencesProvider).setBool(_kGoogleStt, v);
   }
 
   Future<void> setWakeSensitivity(double v) async {

@@ -40,6 +40,14 @@ class _MicButtonState extends ConsumerState<MicButton> {
     }
     if (_state == _Mic.transcribing || d.active) return;
     setState(() => _state = _Mic.listening);
+    final base = widget.controller.text.trim();
+    var shownPartial = false;
+    String join(String words) => base.isEmpty ? words : '$base $words';
+    void show(String text) {
+      widget.controller.text = text;
+      widget.controller.selection = TextSelection.collapsed(offset: text.length);
+    }
+
     try {
       final text = await d.run(
         lang: ref.read(settingsControllerProvider).voiceLang.code,
@@ -49,14 +57,20 @@ class _MicButtonState extends ConsumerState<MicButton> {
         onTranscribing: () {
           if (mounted) setState(() => _state = _Mic.transcribing);
         },
+        // The words so far, in the field, while the user is still talking.
+        onPartial: (words) {
+          if (!mounted) return;
+          shownPartial = true;
+          show(join(words));
+        },
       );
       if (!mounted) return;
       if (text.isNotEmpty) {
-        final base = widget.controller.text.trim();
-        final joined = base.isEmpty ? text : '$base $text';
-        widget.controller.text = joined;
-        widget.controller.selection = TextSelection.collapsed(offset: joined.length);
+        final joined = join(text);
+        show(joined);
         widget.onFinal?.call(joined);
+      } else if (shownPartial) {
+        show(base); // a partial that came to nothing
       }
     } on SpeechException catch (e) {
       if (mounted) {

@@ -11,6 +11,7 @@ import '../../chat/model/chat_models.dart';
 import '../../settings/controller/settings_controller.dart';
 import '../model/audio_capture.dart';
 import '../model/device_tts.dart';
+import '../model/google_speech.dart';
 import '../model/intent_lexicon.dart';
 import '../model/speech_repository.dart';
 import '../model/speech_text.dart';
@@ -34,6 +35,14 @@ final speechRepositoryProvider = Provider<SpeechRepository>((ref) {
       ? OnDeviceSpeechRepository(api)
       : SpeechRepository(api);
 });
+
+/// The phone's Google recogniser, which listens and endpoints by itself. Null when the user
+/// turned it off; then the mic is recorded and [speechRepositoryProvider] transcribes it.
+/// Also bypassed, per utterance, on a phone without a working one.
+final liveRecognizerProvider = Provider<LiveRecognizer?>((ref) =>
+    ref.watch(settingsControllerProvider.select((s) => s.googleStt))
+        ? GoogleSpeechRecognizer.instance
+        : null);
 
 final speechPlayerProvider = Provider<SpeechPlayer>((ref) {
   // The phone's own voice (free, offline) unless the user chose the server's Sarvam voice.
@@ -122,6 +131,7 @@ class VoiceSession extends Notifier<VoiceState> {
   // The utterance being heard right now, if any.
   EnergyVad? _vad;
   Completer<void>? _heard;
+  LiveRecognizer? _live;
 
   // Streaming speech for the turn in flight.
   SentenceChunker? _chunker;
@@ -146,6 +156,7 @@ class VoiceSession extends Notifier<VoiceState> {
     ref.onDispose(() {
       _gen++;
       _barge?.stop();
+      _live?.cancel();
     });
     // Speak each sentence of the answer as soon as it is complete.
     ref.listen<String?>(
@@ -190,6 +201,7 @@ class VoiceSession extends Notifier<VoiceState> {
   Future<void> cancel() async {
     _gen++;
     _muted = true;
+    await _live?.cancel();
     _finishHearing();
     await _barge?.stop();
     _barge = null;
@@ -488,6 +500,12 @@ class VoiceSession extends Notifier<VoiceState> {
       return null;
     }
     if (gen != _gen) return null;
+    final live = ref.read(liveRecognizerProvider);
+    if (live != null && await live.available()) {
+      final heard = await _hearLive(live, what, gen: gen, noSpeechMs: noSpeechMs);
+      if (!identical(heard, _useRecorder)) return heard;
+      if (gen != _gen) return null;
+    }
     final vad = _vad = EnergyVad(sampleRate: AudioCapture.sampleRate, noSpeechMs: noSpeechMs);
     final pcm = BytesBuilder(copy: false);
     final done = _heard = Completer<void>();
@@ -539,7 +557,44 @@ class VoiceSession extends Notifier<VoiceState> {
     }
   }
 
+  /// Returned by [_hearLive] when the phone's recogniser failed before hearing anything: the
+  /// recorder and the server recogniser take this utterance instead.
+  static const _useRecorder = _Heard('\u0000', null);
+
+  /// One utterance through the phone's (Google) recogniser: it owns the mic and decides when
+  /// the user has finished, on the words rather than on loudness.
+  Future<_Heard?> _hearLive(LiveRecognizer live, ListenFor what,
+      {required int gen, required int noSpeechMs}) async {
+    state = state.copyWith(
+        phase: VoicePhase.listening, listenFor: what, level: 0, clearNote: true);
+    // The recogniser opens its own mic; nothing of ours may still be holding it.
+    await _capture.stop();
+    final hint = _settings.voiceLang.code;
+    _live = live;
+    try {
+      final t = await live.listen(
+        lang: hint,
+        noSpeech: Duration(milliseconds: noSpeechMs),
+        onLevel: (l) {
+          if (gen == _gen && state.phase == VoicePhase.listening) {
+            state = state.copyWith(level: l);
+          }
+        },
+      );
+      if (gen != _gen) return null;
+      return _Heard(t.text, hint ?? (t.languageCode.isEmpty ? null : t.languageCode));
+    } on SpeechException catch (e) {
+      if (gen != _gen) return null;
+      if (e.error == SpeechError.recognizer) return _useRecorder;
+      _idle(note: e.detail == 'permission' ? 'Allow the microphone to talk to DocSync.' : e.message);
+      return null;
+    } finally {
+      if (identical(_live, live)) _live = null;
+    }
+  }
+
   void _finishHearing() {
+    _live?.finish();
     _vad?.finish();
     final d = _heard;
     if (d != null && !d.isCompleted) d.complete();

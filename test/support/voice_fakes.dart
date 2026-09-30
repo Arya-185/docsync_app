@@ -11,6 +11,7 @@ import 'package:docsync_app/features/chat/controller/chat_controller.dart';
 import 'package:docsync_app/features/voice/controller/voice_session.dart';
 import 'package:docsync_app/features/voice/controller/wake_word.dart';
 import 'package:docsync_app/features/voice/model/audio_capture.dart';
+import 'package:docsync_app/features/voice/model/google_speech.dart';
 import 'package:docsync_app/features/voice/model/speech_repository.dart';
 import 'package:docsync_app/features/voice/model/tts_player.dart';
 import 'package:docsync_app/features/voice/model/wake_word_engine.dart';
@@ -114,6 +115,45 @@ class FakeSpeech implements SpeechRepository {
   dynamic noSuchMethod(Invocation i) => super.noSuchMethod(i);
 }
 
+/// The phone's recogniser: each listen() takes the next entry of [heard] — a String is what was
+/// said, a SpeechException is how it failed ('' once they run out).
+class FakeLive implements LiveRecognizer {
+  FakeLive(List<Object> heard, {this.isAvailable = true}) : _queue = [...heard];
+  final List<Object> _queue;
+  final bool isAvailable;
+  final List<({String? lang, Duration noSpeech})> listens = [];
+  int finishes = 0;
+  int cancels = 0;
+
+  @override
+  Future<bool> available() async => isAvailable;
+
+  @override
+  Future<Transcript> listen({
+    String? lang,
+    Duration noSpeech = const Duration(seconds: 8),
+    void Function(double level)? onLevel,
+    void Function(String words)? onPartial,
+  }) async {
+    listens.add((lang: lang, noSpeech: noSpeech));
+    await Future<void>.delayed(Duration.zero);
+    final next = _queue.isEmpty ? '' : _queue.removeAt(0);
+    if (next is SpeechException) throw next;
+    final words = next as String;
+    if (words.isNotEmpty) {
+      onLevel?.call(0.6);
+      onPartial?.call(words.split(' ').first);
+    }
+    return Transcript(words, lang ?? 'en-IN');
+  }
+
+  @override
+  Future<void> finish() async => finishes++;
+
+  @override
+  Future<void> cancel() async => cancels++;
+}
+
 /// A speaker that finishes instantly — or, with [holdPlayback], keeps its FIRST reply playing
 /// until stopped (so there is something to talk over); later replies finish instantly.
 class FakePlayer implements SpeechPlayer {
@@ -190,6 +230,7 @@ Future<VoiceHarness> voiceHarness({
   bool holdPlayback = false,
   SpeechException? sttFails,
   WakeWordEngine? wake,
+  LiveRecognizer? live,
 }) async {
   SharedPreferences.setMockInitialValues({
     'voice_follow_up': followUp,
@@ -206,6 +247,8 @@ Future<VoiceHarness> voiceHarness({
     chatRepositoryProvider.overrideWithValue(chat),
     audioCaptureProvider.overrideWithValue(capture),
     speechRepositoryProvider.overrideWithValue(speech),
+    // Null by default: the recorder + [FakeSpeech] path, which most tests drive.
+    liveRecognizerProvider.overrideWithValue(live),
     speechPlayerProvider.overrideWithValue(player),
     wakeWordEngineProvider.overrideWithValue(wake ?? FakeWakeEngine()),
   ]);
