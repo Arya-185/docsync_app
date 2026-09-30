@@ -1,7 +1,8 @@
 /// App-wide configuration and persisted-preference keys.
 class AppConfig {
   /// DocSync backend. Fixed — not shown or editable in the UI.
-  static const String defaultBaseUrl = 'https://ak.aryamehta.com';
+  static const String defaultBaseUrl =
+      'https://pragmainfotech.com/docsyncin_test';
 
   // shared_preferences keys.
   static const String prefCmpAbbr = 'cmp_abbr';
