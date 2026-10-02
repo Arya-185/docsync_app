@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/design/tokens.dart';
 import '../../../shared/widgets/brand_logo.dart';
 import '../controller/auth_controller.dart';
 
@@ -71,7 +72,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: 16),
                     Text('DocSync AI',
                         style: theme.textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.w700)),
+                            ?.copyWith(color: Ds.brand, fontWeight: FontWeight.w800)),
                     const SizedBox(height: 4),
                     Text('Ask AI over your documents',
                         style: theme.textTheme.bodyMedium

@@ -1,8 +1,10 @@
 /// App-wide configuration and persisted-preference keys.
 class AppConfig {
   /// DocSync backend. Fixed — not shown or editable in the UI.
-  static const String defaultBaseUrl =
-      'https://pragmainfotech.com/docsyncin_test';
+  /// ak (branch `arya`) since 2 Oct 2026, where the new Ask AI features deploy first. The
+  /// previous server was 'https://pragmainfotech.com/docsyncin_test'; switch back once it runs
+  /// the same code (it has no open.php / ai_preview.php / ai_fix.php yet).
+  static const String defaultBaseUrl = 'https://ak.aryamehta.com';
 
   // shared_preferences keys.
   static const String prefCmpAbbr = 'cmp_abbr';

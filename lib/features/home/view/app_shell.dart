@@ -105,6 +105,7 @@ class _Header extends StatelessWidget {
           const SizedBox(width: 10),
           Text('DocSync',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: Ds.brand,
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.4,
                   )),

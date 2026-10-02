@@ -129,7 +129,10 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: Ds.s4),
-            Center(child: Text('DocSync AI', style: theme.textTheme.bodySmall)),
+            Center(
+                child: Text('DocSync AI',
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: Ds.brand, fontWeight: FontWeight.w700))),
           ],
         ),
       ),

@@ -7,6 +7,8 @@ class Ds {
   Ds._();
 
   // Brand.
+  /// The "DocSync" wordmark colour: bold #1967CB, exactly as on docsync.in and every web page.
+  static const brand = Color(0xFF1967CB);
   static const blue = Color(0xFF2563EB);
   static const indigo = Color(0xFF4F46E5);
   static const violet = Color(0xFF7C3AED);
