@@ -15,6 +15,8 @@ import '../../model/chat_models.dart';
 import '../web_page_screen.dart';
 import 'a2ui_surface_view.dart';
 import 'confirm_card.dart';
+import 'fix_form_sheet.dart';
+import 'preview_sheet.dart';
 
 class ChatBubble extends StatelessWidget {
   const ChatBubble({super.key, required this.message});
@@ -113,10 +115,15 @@ class _AssistantBodyState extends ConsumerState<_AssistantBody> {
   String _note = '';
   bool _noteIsError = false;
 
-  /// A commit is in flight, or already succeeded. genui keeps the Confirm button pressable after
-  /// a tap, so without this a second tap — or an impatient double tap — POSTs the same write twice.
-  bool _committing = false;
-  bool _committed = false;
+  /// Commits in flight from this bubble, by ledger key. genui keeps a Confirm button pressable
+  /// after a tap; the ledger already refuses a second write, and this keeps an impatient double
+  /// tap from even asking. Per CARD, not per bubble: one reply may carry several (server M5),
+  /// and confirming the first must not lock the second.
+  final Set<String> _inflight = {};
+
+  /// A failed commit's message under its own card, by surface id. The ledger forgets a failure
+  /// so the card can be retried, so the message has to live here.
+  final Map<String, SurfaceNote> _failed = {};
 
   void _setNote(String text, {bool error = false}) {
     if (!mounted) return;
@@ -126,6 +133,8 @@ class _AssistantBodyState extends ConsumerState<_AssistantBody> {
     });
   }
 
+  int get _conv => ref.read(chatControllerProvider).conversationId;
+
   Future<void> _handle(A2uiAction action) async {
     switch (action) {
       case SendChat(:final text):
@@ -134,29 +143,77 @@ class _AssistantBodyState extends ConsumerState<_AssistantBody> {
         final sent = await ref.read(chatControllerProvider.notifier).send(text);
         // Refused because an answer is still running: say so rather than ignore the tap.
         if (!sent) _setNote('Still answering — wait for it, or tap Stop first.', error: true);
-      case CommitWrite(action: final name, :final args):
-        if (_committing || _committed) return;
-        _committing = true;
-        _setNote('Working…');
-        final conv = ref.read(chatControllerProvider).conversationId;
-        // Through the ledger, so a spoken "yes" to the same proposal cannot write it again.
-        final res = await ref.read(commitLedgerProvider.notifier).commit(conv, name, args);
-        _committing = false;
-        _committed = res.ok; // a failure leaves the button usable for a retry
-        _setNote(res.message, error: !res.ok);
-      case CancelWrite(:final action):
-        final c = confirmOf(widget.message);
-        if (c != null && c.name == action) {
-          ref.read(commitLedgerProvider.notifier)
-              .cancel(ref.read(chatControllerProvider).conversationId, c.name, c.args);
+      case CommitWrite(action: final name, :final args, :final key):
+        final conv = _conv;
+        final lk = CommitLedger.keyFor(conv, name, args);
+        if (!_inflight.add(lk)) return;
+        final sid = confirmSurfaceId(name, key);
+        setState(() => _failed.remove(sid));
+        // Through the ledger, so a spoken "yes" to the same proposal cannot write it again. Once
+        // it says done, build() retires this card — and only this card — from the ledger.
+        final res = await ref
+            .read(commitLedgerProvider.notifier)
+            .commit(conv, name, args, proposalKey: key);
+        _inflight.remove(lk);
+        if (!mounted) return;
+        if (!res.ok) setState(() => _failed[sid] = SurfaceNote(res.message, error: true));
+      case CancelWrite(action: final name, :final key):
+        final c = _proposal(name, key);
+        if (c != null) {
+          ref.read(commitLedgerProvider.notifier).cancel(_conv, c.name, c.args);
+        } else {
+          _setNote('Cancelled.');
         }
-        _setNote('Cancelled.');
       case OpenPage(:final url):
         _setNote('');
         await WebPageScreen.push(context, url);
+      case OpenPreview(:final request):
+        _setNote('');
+        await PreviewSheet.show(context, request);
+      case OpenForm(:final request):
+        _setNote('');
+        final saved = await FixFormSheet.show(context, request);
+        if (saved == null || !mounted) return;
+        // Saved: ask the question that stopped on it again, so the action carries on by itself.
+        if (request.retry.isEmpty) {
+          _setNote(saved);
+          return;
+        }
+        final sent = await ref.read(chatControllerProvider.notifier).send(request.retry);
+        _setNote(sent ? saved : '$saved Ask again once the current answer has finished.');
       case ActionFailed(:final message):
         _setNote(message, error: true);
     }
+  }
+
+  /// The proposal a Cancel names: its action, and its key when the reply carried several.
+  VoiceConfirm? _proposal(String action, String key) {
+    for (final c in confirmsOf(widget.message)) {
+      if (c.name == action && c.key == key) return c;
+    }
+    return null;
+  }
+
+  /// What has happened to each confirm card, from the ledger — whoever answered it: a tap here,
+  /// the fallback card, or a spoken yes. The genui surface cannot retire its own buttons.
+  Map<String, SurfaceNote> _cardNotes(ChatMessage m, int conv, Map<String, CommitEntry> ledger) {
+    final notes = <String, SurfaceNote>{};
+    for (final c in confirmsOf(m)) {
+      final sid = c.surfaceId;
+      final e = ledger[CommitLedger.keyFor(conv, c.name, c.args)];
+      switch (e?.phase) {
+        case CommitPhase.working:
+          notes[sid] = const SurfaceNote('Working…');
+        case CommitPhase.done:
+          notes[sid] = SurfaceNote(e!.message.isEmpty ? 'Done.' : e.message, retired: true);
+        case CommitPhase.cancelled:
+          notes[sid] = const SurfaceNote('Cancelled.', retired: true, cancelled: true);
+        case null:
+          final failed = _failed[sid];
+          if (failed != null) notes[sid] = failed;
+      }
+    }
+    return notes;
   }
 
   @override
@@ -164,19 +221,13 @@ class _AssistantBodyState extends ConsumerState<_AssistantBody> {
     final m = widget.message;
     final theme = Theme.of(context);
     final text = m.visibleContent(rendered: _rendered);
-    // Answered by voice? Say so here too — the genui surface cannot retire its own buttons.
-    final c = confirmOf(m);
     final conv = ref.watch(chatControllerProvider.select((s) => s.conversationId));
-    final key = c == null ? null : CommitLedger.keyFor(conv, c.name, c.args);
-    final spoken = key == null ? null : ref.watch(commitLedgerProvider.select((l) => l[key]));
-    final note = _note.isNotEmpty
-        ? _note
-        : switch (spoken?.phase) {
-            CommitPhase.working => 'Working…',
-            CommitPhase.done => spoken!.message.isEmpty ? 'Done.' : spoken.message,
-            CommitPhase.cancelled => 'Cancelled.',
-            null => '',
-          };
+    final ledger = ref.watch(commitLedgerProvider);
+    final notes = _cardNotes(m, conv, ledger);
+    final note = _note;
+    final proposals = m.confirms.isNotEmpty
+        ? m.confirms
+        : (m.confirm == null ? const <ConfirmProposal>[] : [m.confirm!]);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -191,13 +242,16 @@ class _AssistantBodyState extends ConsumerState<_AssistantBody> {
           A2uiSurfaceView(
             messages: m.a2ui,
             onAction: _handle,
+            notes: notes,
             onRenderedChanged: (r) {
               if (r != _rendered && mounted) setState(() => _rendered = r);
             },
           ),
-        // The legacy card, and ONLY when no surface drew one. A confirm-only turn has no prose
-        // at all, so this card is the whole message.
-        if (m.confirm != null && !_rendered) ConfirmCard(proposal: m.confirm!),
+        // The legacy cards, and ONLY when no surface drew them. A confirm-only turn has no prose
+        // at all, so these cards are the whole message.
+        if (!_rendered)
+          for (final p in proposals)
+            ConfirmCard(key: ValueKey('${p.name}|${p.key}'), proposal: p),
         if (note.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 8),

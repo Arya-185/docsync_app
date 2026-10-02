@@ -175,6 +175,7 @@ class ChatController extends Notifier<ChatState> {
     var sawAnswerText = false; // a confirm-only turn legitimately has none
     final surfaces = <Map<String, dynamic>>[];
     final superseded = <String>[];
+    final proposals = <ConfirmProposal>[];
     List<Citation> citations = const [];
 
     /* Every write below is guarded by ref.mounted: signing out invalidates this provider while a
@@ -221,6 +222,7 @@ class ChatController extends Notifier<ChatState> {
       String? think,
       List<Map<String, dynamic>>? a2ui,
       ConfirmProposal? confirm,
+      List<ConfirmProposal>? confirms,
       List<String>? superseded,
     }) {
       if (!ref.mounted) return;
@@ -233,6 +235,7 @@ class ChatController extends Notifier<ChatState> {
         thinking: think,
         a2ui: a2ui,
         confirm: confirm,
+        confirms: confirms,
         supersedes: superseded,
       );
       state = state.copyWith(messages: list);
@@ -323,7 +326,13 @@ class ChatController extends Notifier<ChatState> {
             /* No longer "confirm this in the desktop app". The proposal is kept on
                the message; the bubble renders the A2UI surface when one arrived and
                this card otherwise, and either one POSTs to ai_commit.php. */
-            if (ev.proposal != null) updateAssistant(confirm: ev.proposal);
+            /* A multi-part reply (server M5) sends one `confirm` per card. Keep them ALL, the
+               first staying `confirm` for everything that reads one: assigning each new one
+               over the last left the earlier card with no fallback and nothing for voice. */
+            if (ev.proposal != null) {
+              proposals.add(ev.proposal!);
+              updateAssistant(confirm: proposals.first, confirms: List.of(proposals));
+            }
             break;
           case RagEventType.unavailable:
             answer = _unavailableMessage(ev.reason);

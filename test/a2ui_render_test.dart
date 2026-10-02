@@ -18,6 +18,8 @@ import 'dart:io';
 
 import 'package:docsync_app/features/chat/model/a2ui_actions.dart';
 import 'package:docsync_app/features/chat/model/a2ui_navigate.dart';
+import 'package:docsync_app/features/chat/model/a2ui_tone.dart';
+import 'package:docsync_app/features/chat/view/widgets/a2ui_docsync_catalog.dart';
 import 'package:docsync_app/features/chat/view/widgets/a2ui_surface_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -62,6 +64,12 @@ void main() {
       'next_steps',
       'link',
       'facts',
+      // Server M3–M5: Preview on a confirm card and an invoice card, "Enter information", and a
+      // confirm card that is one of several in a reply.
+      'confirm_preview',
+      'link_invoice',
+      'fix',
+      'confirm_keyed',
     };
     final present = fixtures.keys.toSet();
     expect(expected.difference(present), isEmpty,
@@ -371,6 +379,129 @@ void main() {
       // them twice is a bad_request at the other end.
       expect(commit.args, isA<Map<String, dynamic>>());
       expect(commit.args, isNotEmpty);
+    });
+  });
+
+  group('Preview (server M3)', () {
+    testWidgets('a confirm card previews its own draft, args as the card holds them',
+        (tester) async {
+      final actions = await pump(tester, 'confirm_preview');
+      await tester.tap(find.text('Preview'));
+      await tester.pumpAndSettle();
+      expect(actions, hasLength(1));
+      final req = (actions.single as OpenPreview).request;
+      expect(req.kind, 'draft');
+      expect(req.action, 'create_invoice');
+      expect(jsonDecode(req.args), containsPair('task_ids', [812, 813]));
+      expect(req.fields.keys, containsAll(['kind', 'action', 'args']));
+    });
+
+    testWidgets('an invoice card previews the saved invoice, and still opens its page',
+        (tester) async {
+      final actions = await pump(tester, 'link_invoice');
+      await tester.tap(find.text('Preview'));
+      await tester.tap(find.text('Open invoice'));
+      await tester.pumpAndSettle();
+      expect(actions.first, const OpenPreview(PreviewRequest.invoice(301)));
+      expect(actions.last, const OpenPage('open.php?kind=invoice&id=301'));
+    });
+  });
+
+  group('Enter information (server M4)', () {
+    testWidgets('names the form, its record, the field and the question to ask again',
+        (tester) async {
+      final actions = await pump(tester, 'fix');
+      expect(find.text('Add an email for Acme Traders'), findsOneWidget);
+      await tester.tap(find.text('Enter information'));
+      await tester.pumpAndSettle();
+      expect(
+          actions.single,
+          const OpenForm(FormRequest(
+              form: 'client_contact',
+              ids: '2144',
+              need: 'email',
+              retry: 'email invoice 07/2026-27')));
+    });
+  });
+
+  group('several confirm cards in one reply (server M5)', () {
+    testWidgets('Confirm and Cancel name their own card', (tester) async {
+      final actions = await pump(tester, 'confirm_keyed');
+      await tester.tap(find.text('Confirm'));
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      final commit = actions.first as CommitWrite;
+      expect(commit.key, matches(RegExp(r'^[a-f0-9]{8}$')));
+      expect(commit.args, containsPair('task_ids', [815]));
+      expect(actions.last, CancelWrite('create_invoice', key: commit.key));
+    });
+
+    testWidgets('a lone card has no key, as before', (tester) async {
+      final actions = await pump(tester, 'confirm');
+      await tester.tap(find.text('Confirm'));
+      await tester.pumpAndSettle();
+      expect((actions.single as CommitWrite).key, '');
+    });
+
+    testWidgets('an answered card gives way to its note; the others stay', (tester) async {
+      final both = [
+        ...fixtures['confirm_keyed']!,
+        ...fixtures['confirm']!,
+      ].map((m) => jsonDecode(jsonEncode(m)) as Map<String, dynamic>).toList();
+      final keyed = surfaceIdOf(fixtures['confirm_keyed']!.first)!;
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: A2uiSurfaceView(
+              messages: both,
+              onAction: (_) {},
+              notes: {keyed: const SurfaceNote('Created invoice 04/2026-27.', retired: true)},
+            ),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      expect(find.text('Created invoice 04/2026-27.'), findsOneWidget);
+      expect(find.textContaining('Invoice 04/2026-27 for Acme Traders'), findsNothing);
+      expect(find.text('Confirm'), findsOneWidget, reason: 'the other card keeps its buttons');
+    });
+  });
+
+  group('the DocSync look', () {
+    testWidgets('a status word is a pill coloured by its tone', (tester) async {
+      await pump(tester, 'list_long');
+      final pill = tester.widget<TonePill>(find.widgetWithText(TonePill, 'Completed').first);
+      expect(pill.text, 'Completed');
+      expect(find.widgetWithText(TonePill, 'Pending'), findsWidgets);
+    });
+
+    testWidgets('a long list shows eight rows, then "Show N more" shows the rest',
+        (tester) async {
+      await pump(tester, 'list_long');
+      final total = fixtures['list_long']!
+          .expand((m) => (m['updateComponents']?['components'] as List?) ?? const [])
+          .where((c) => RegExp(r'^c\d+$').hasMatch('${(c as Map)['id']}'))
+          .length;
+      expect(total, greaterThan(visibleRows));
+      expect(find.byType(Card), findsNWidgets(visibleRows));
+      final more = find.text(moreLabel(total - visibleRows, false));
+      expect(more, findsOneWidget);
+      await tester.tap(more);
+      await tester.pumpAndSettle();
+      expect(find.byType(Card), findsNWidgets(total));
+      expect(find.text('Show fewer'), findsOneWidget);
+    });
+
+    testWidgets('a confirm sits in the amber box', (tester) async {
+      await pump(tester, 'confirm');
+      final boxes =
+          tester.widgetList<Material>(find.byType(Material)).where((m) => m.color == A2.amberBg);
+      expect(boxes, isNotEmpty);
+    });
+
+    testWidgets('a warning reads as one', (tester) async {
+      await pump(tester, 'confirm_preview');
+      expect(find.textContaining('⚠ 1 task(s) have no fee set'), findsOneWidget);
     });
   });
 

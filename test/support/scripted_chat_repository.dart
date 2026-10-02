@@ -88,7 +88,7 @@ class ScriptedChatRepository implements ChatRepository {
   }
 
   /// Every commit this repository was asked to make.
-  final List<({String action, Map<String, dynamic> args, int conv})> commits =
+  final List<({String action, Map<String, dynamic> args, int conv, String key})> commits =
       [];
 
   /// What [commit] answers. Mutable so a test can fail once and then succeed.
@@ -96,9 +96,30 @@ class ScriptedChatRepository implements ChatRepository {
 
   @override
   Future<CommitResult> commit(String action, Map<String, dynamic> args,
-      {int conv = 0}) async {
-    commits.add((action: action, args: args, conv: conv));
+      {int conv = 0, String key = ''}) async {
+    commits.add((action: action, args: args, conv: conv, key: key));
     return commitResult;
+  }
+
+  /// Every ai_preview.php / ai_fix.php post, in order.
+  final List<Map<String, String>> previews = [];
+  final List<Map<String, String>> fixes = [];
+
+  /// What [preview] and [fix] answer.
+  PreviewResult previewResult = const PreviewResult(false, message: 'No preview in this test.');
+  Map<String, dynamic> Function(Map<String, String> fields) fixReply =
+      (_) => {'ok': false, 'message': 'No form in this test.'};
+
+  @override
+  Future<PreviewResult> preview(Map<String, String> fields) async {
+    previews.add(fields);
+    return previewResult;
+  }
+
+  @override
+  Future<Map<String, dynamic>> fix(Map<String, String> fields) async {
+    fixes.add(fields);
+    return fixReply(fields);
   }
 
   @override

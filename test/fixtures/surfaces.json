@@ -663,14 +663,14 @@
         {
             "version": "v0.9",
             "createSurface": {
-                "surfaceId": "list_list_todos_0039752b",
+                "surfaceId": "list_list_todos_cdda4902",
                 "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
             }
         },
         {
             "version": "v0.9",
             "updateComponents": {
-                "surfaceId": "list_list_todos_0039752b",
+                "surfaceId": "list_list_todos_cdda4902",
                 "components": [
                     {
                         "id": "root",
@@ -691,7 +691,7 @@
                         "text": "File the GST return"
                     },
                     {
-                        "id": "h0",
+                        "id": "m0",
                         "component": "Text",
                         "variant": "caption",
                         "text": "High priority · due 25 Sep 2026"
@@ -701,7 +701,7 @@
                         "component": "Column",
                         "children": [
                             "l0",
-                            "h0"
+                            "m0"
                         ]
                     },
                     {
@@ -731,7 +731,7 @@
                         "text": "Call Sharma"
                     },
                     {
-                        "id": "h1",
+                        "id": "m1",
                         "component": "Text",
                         "variant": "caption",
                         "text": "Low priority"
@@ -741,7 +741,7 @@
                         "component": "Column",
                         "children": [
                             "l1",
-                            "h1"
+                            "m1"
                         ]
                     },
                     {
@@ -783,22 +783,21 @@
         {
             "version": "v0.9",
             "createSurface": {
-                "surfaceId": "list_query_tasks_afc514ae",
+                "surfaceId": "list_query_tasks_abfdb12f",
                 "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
             }
         },
         {
             "version": "v0.9",
             "updateComponents": {
-                "surfaceId": "list_query_tasks_afc514ae",
+                "surfaceId": "list_query_tasks_abfdb12f",
                 "components": [
                     {
                         "id": "root",
                         "component": "Column",
                         "children": [
                             "head",
-                            "rows",
-                            "more"
+                            "rows"
                         ]
                     },
                     {
@@ -809,13 +808,29 @@
                     {
                         "id": "l0",
                         "component": "Text",
-                        "text": "Task number 1"
+                        "text": "Task number 1",
+                        "weight": 1
+                    },
+                    {
+                        "id": "s0",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Completed"
+                    },
+                    {
+                        "id": "t0",
+                        "component": "Row",
+                        "align": "center",
+                        "children": [
+                            "l0",
+                            "s0"
+                        ]
                     },
                     {
                         "id": "b0",
                         "component": "Column",
                         "children": [
-                            "l0"
+                            "t0"
                         ]
                     },
                     {
@@ -842,13 +857,29 @@
                     {
                         "id": "l1",
                         "component": "Text",
-                        "text": "Task number 2"
+                        "text": "Task number 2",
+                        "weight": 1
+                    },
+                    {
+                        "id": "s1",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Pending"
+                    },
+                    {
+                        "id": "t1",
+                        "component": "Row",
+                        "align": "center",
+                        "children": [
+                            "l1",
+                            "s1"
+                        ]
                     },
                     {
                         "id": "b1",
                         "component": "Column",
                         "children": [
-                            "l1"
+                            "t1"
                         ]
                     },
                     {
@@ -875,13 +906,29 @@
                     {
                         "id": "l2",
                         "component": "Text",
-                        "text": "Task number 3"
+                        "text": "Task number 3",
+                        "weight": 1
+                    },
+                    {
+                        "id": "s2",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Completed"
+                    },
+                    {
+                        "id": "t2",
+                        "component": "Row",
+                        "align": "center",
+                        "children": [
+                            "l2",
+                            "s2"
+                        ]
                     },
                     {
                         "id": "b2",
                         "component": "Column",
                         "children": [
-                            "l2"
+                            "t2"
                         ]
                     },
                     {
@@ -908,13 +955,29 @@
                     {
                         "id": "l3",
                         "component": "Text",
-                        "text": "Task number 4"
+                        "text": "Task number 4",
+                        "weight": 1
+                    },
+                    {
+                        "id": "s3",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Pending"
+                    },
+                    {
+                        "id": "t3",
+                        "component": "Row",
+                        "align": "center",
+                        "children": [
+                            "l3",
+                            "s3"
+                        ]
                     },
                     {
                         "id": "b3",
                         "component": "Column",
                         "children": [
-                            "l3"
+                            "t3"
                         ]
                     },
                     {
@@ -941,13 +1004,29 @@
                     {
                         "id": "l4",
                         "component": "Text",
-                        "text": "Task number 5"
+                        "text": "Task number 5",
+                        "weight": 1
+                    },
+                    {
+                        "id": "s4",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Completed"
+                    },
+                    {
+                        "id": "t4",
+                        "component": "Row",
+                        "align": "center",
+                        "children": [
+                            "l4",
+                            "s4"
+                        ]
                     },
                     {
                         "id": "b4",
                         "component": "Column",
                         "children": [
-                            "l4"
+                            "t4"
                         ]
                     },
                     {
@@ -974,13 +1053,29 @@
                     {
                         "id": "l5",
                         "component": "Text",
-                        "text": "Task number 6"
+                        "text": "Task number 6",
+                        "weight": 1
+                    },
+                    {
+                        "id": "s5",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Pending"
+                    },
+                    {
+                        "id": "t5",
+                        "component": "Row",
+                        "align": "center",
+                        "children": [
+                            "l5",
+                            "s5"
+                        ]
                     },
                     {
                         "id": "b5",
                         "component": "Column",
                         "children": [
-                            "l5"
+                            "t5"
                         ]
                     },
                     {
@@ -1007,13 +1102,29 @@
                     {
                         "id": "l6",
                         "component": "Text",
-                        "text": "Task number 7"
+                        "text": "Task number 7",
+                        "weight": 1
+                    },
+                    {
+                        "id": "s6",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Completed"
+                    },
+                    {
+                        "id": "t6",
+                        "component": "Row",
+                        "align": "center",
+                        "children": [
+                            "l6",
+                            "s6"
+                        ]
                     },
                     {
                         "id": "b6",
                         "component": "Column",
                         "children": [
-                            "l6"
+                            "t6"
                         ]
                     },
                     {
@@ -1040,13 +1151,29 @@
                     {
                         "id": "l7",
                         "component": "Text",
-                        "text": "Task number 8"
+                        "text": "Task number 8",
+                        "weight": 1
+                    },
+                    {
+                        "id": "s7",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Pending"
+                    },
+                    {
+                        "id": "t7",
+                        "component": "Row",
+                        "align": "center",
+                        "children": [
+                            "l7",
+                            "s7"
+                        ]
                     },
                     {
                         "id": "b7",
                         "component": "Column",
                         "children": [
-                            "l7"
+                            "t7"
                         ]
                     },
                     {
@@ -1073,13 +1200,29 @@
                     {
                         "id": "l8",
                         "component": "Text",
-                        "text": "Task number 9"
+                        "text": "Task number 9",
+                        "weight": 1
+                    },
+                    {
+                        "id": "s8",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Completed"
+                    },
+                    {
+                        "id": "t8",
+                        "component": "Row",
+                        "align": "center",
+                        "children": [
+                            "l8",
+                            "s8"
+                        ]
                     },
                     {
                         "id": "b8",
                         "component": "Column",
                         "children": [
-                            "l8"
+                            "t8"
                         ]
                     },
                     {
@@ -1106,13 +1249,29 @@
                     {
                         "id": "l9",
                         "component": "Text",
-                        "text": "Task number 10"
+                        "text": "Task number 10",
+                        "weight": 1
+                    },
+                    {
+                        "id": "s9",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Pending"
+                    },
+                    {
+                        "id": "t9",
+                        "component": "Row",
+                        "align": "center",
+                        "children": [
+                            "l9",
+                            "s9"
+                        ]
                     },
                     {
                         "id": "b9",
                         "component": "Column",
                         "children": [
-                            "l9"
+                            "t9"
                         ]
                     },
                     {
@@ -1139,13 +1298,29 @@
                     {
                         "id": "l10",
                         "component": "Text",
-                        "text": "Task number 11"
+                        "text": "Task number 11",
+                        "weight": 1
+                    },
+                    {
+                        "id": "s10",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Completed"
+                    },
+                    {
+                        "id": "t10",
+                        "component": "Row",
+                        "align": "center",
+                        "children": [
+                            "l10",
+                            "s10"
+                        ]
                     },
                     {
                         "id": "b10",
                         "component": "Column",
                         "children": [
-                            "l10"
+                            "t10"
                         ]
                     },
                     {
@@ -1172,13 +1347,29 @@
                     {
                         "id": "l11",
                         "component": "Text",
-                        "text": "Task number 12"
+                        "text": "Task number 12",
+                        "weight": 1
+                    },
+                    {
+                        "id": "s11",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Pending"
+                    },
+                    {
+                        "id": "t11",
+                        "component": "Row",
+                        "align": "center",
+                        "children": [
+                            "l11",
+                            "s11"
+                        ]
                     },
                     {
                         "id": "b11",
                         "component": "Column",
                         "children": [
-                            "l11"
+                            "t11"
                         ]
                     },
                     {
@@ -1203,6 +1394,888 @@
                         "child": "a11"
                     },
                     {
+                        "id": "l12",
+                        "component": "Text",
+                        "text": "Task number 13",
+                        "weight": 1
+                    },
+                    {
+                        "id": "s12",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Completed"
+                    },
+                    {
+                        "id": "t12",
+                        "component": "Row",
+                        "align": "center",
+                        "children": [
+                            "l12",
+                            "s12"
+                        ]
+                    },
+                    {
+                        "id": "b12",
+                        "component": "Column",
+                        "children": [
+                            "t12"
+                        ]
+                    },
+                    {
+                        "id": "a12",
+                        "component": "Button",
+                        "variant": "borderless",
+                        "child": "b12",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "task",
+                                    "id": 13,
+                                    "label": "Task number 13"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c12",
+                        "component": "Card",
+                        "child": "a12"
+                    },
+                    {
+                        "id": "l13",
+                        "component": "Text",
+                        "text": "Task number 14",
+                        "weight": 1
+                    },
+                    {
+                        "id": "s13",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Pending"
+                    },
+                    {
+                        "id": "t13",
+                        "component": "Row",
+                        "align": "center",
+                        "children": [
+                            "l13",
+                            "s13"
+                        ]
+                    },
+                    {
+                        "id": "b13",
+                        "component": "Column",
+                        "children": [
+                            "t13"
+                        ]
+                    },
+                    {
+                        "id": "a13",
+                        "component": "Button",
+                        "variant": "borderless",
+                        "child": "b13",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "task",
+                                    "id": 14,
+                                    "label": "Task number 14"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c13",
+                        "component": "Card",
+                        "child": "a13"
+                    },
+                    {
+                        "id": "l14",
+                        "component": "Text",
+                        "text": "Task number 15",
+                        "weight": 1
+                    },
+                    {
+                        "id": "s14",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Completed"
+                    },
+                    {
+                        "id": "t14",
+                        "component": "Row",
+                        "align": "center",
+                        "children": [
+                            "l14",
+                            "s14"
+                        ]
+                    },
+                    {
+                        "id": "b14",
+                        "component": "Column",
+                        "children": [
+                            "t14"
+                        ]
+                    },
+                    {
+                        "id": "a14",
+                        "component": "Button",
+                        "variant": "borderless",
+                        "child": "b14",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "task",
+                                    "id": 15,
+                                    "label": "Task number 15"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c14",
+                        "component": "Card",
+                        "child": "a14"
+                    },
+                    {
+                        "id": "l15",
+                        "component": "Text",
+                        "text": "Task number 16",
+                        "weight": 1
+                    },
+                    {
+                        "id": "s15",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Pending"
+                    },
+                    {
+                        "id": "t15",
+                        "component": "Row",
+                        "align": "center",
+                        "children": [
+                            "l15",
+                            "s15"
+                        ]
+                    },
+                    {
+                        "id": "b15",
+                        "component": "Column",
+                        "children": [
+                            "t15"
+                        ]
+                    },
+                    {
+                        "id": "a15",
+                        "component": "Button",
+                        "variant": "borderless",
+                        "child": "b15",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "task",
+                                    "id": 16,
+                                    "label": "Task number 16"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c15",
+                        "component": "Card",
+                        "child": "a15"
+                    },
+                    {
+                        "id": "l16",
+                        "component": "Text",
+                        "text": "Task number 17",
+                        "weight": 1
+                    },
+                    {
+                        "id": "s16",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Completed"
+                    },
+                    {
+                        "id": "t16",
+                        "component": "Row",
+                        "align": "center",
+                        "children": [
+                            "l16",
+                            "s16"
+                        ]
+                    },
+                    {
+                        "id": "b16",
+                        "component": "Column",
+                        "children": [
+                            "t16"
+                        ]
+                    },
+                    {
+                        "id": "a16",
+                        "component": "Button",
+                        "variant": "borderless",
+                        "child": "b16",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "task",
+                                    "id": 17,
+                                    "label": "Task number 17"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c16",
+                        "component": "Card",
+                        "child": "a16"
+                    },
+                    {
+                        "id": "l17",
+                        "component": "Text",
+                        "text": "Task number 18",
+                        "weight": 1
+                    },
+                    {
+                        "id": "s17",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Pending"
+                    },
+                    {
+                        "id": "t17",
+                        "component": "Row",
+                        "align": "center",
+                        "children": [
+                            "l17",
+                            "s17"
+                        ]
+                    },
+                    {
+                        "id": "b17",
+                        "component": "Column",
+                        "children": [
+                            "t17"
+                        ]
+                    },
+                    {
+                        "id": "a17",
+                        "component": "Button",
+                        "variant": "borderless",
+                        "child": "b17",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "task",
+                                    "id": 18,
+                                    "label": "Task number 18"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c17",
+                        "component": "Card",
+                        "child": "a17"
+                    },
+                    {
+                        "id": "l18",
+                        "component": "Text",
+                        "text": "Task number 19",
+                        "weight": 1
+                    },
+                    {
+                        "id": "s18",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Completed"
+                    },
+                    {
+                        "id": "t18",
+                        "component": "Row",
+                        "align": "center",
+                        "children": [
+                            "l18",
+                            "s18"
+                        ]
+                    },
+                    {
+                        "id": "b18",
+                        "component": "Column",
+                        "children": [
+                            "t18"
+                        ]
+                    },
+                    {
+                        "id": "a18",
+                        "component": "Button",
+                        "variant": "borderless",
+                        "child": "b18",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "task",
+                                    "id": 19,
+                                    "label": "Task number 19"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c18",
+                        "component": "Card",
+                        "child": "a18"
+                    },
+                    {
+                        "id": "l19",
+                        "component": "Text",
+                        "text": "Task number 20",
+                        "weight": 1
+                    },
+                    {
+                        "id": "s19",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Pending"
+                    },
+                    {
+                        "id": "t19",
+                        "component": "Row",
+                        "align": "center",
+                        "children": [
+                            "l19",
+                            "s19"
+                        ]
+                    },
+                    {
+                        "id": "b19",
+                        "component": "Column",
+                        "children": [
+                            "t19"
+                        ]
+                    },
+                    {
+                        "id": "a19",
+                        "component": "Button",
+                        "variant": "borderless",
+                        "child": "b19",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "task",
+                                    "id": 20,
+                                    "label": "Task number 20"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c19",
+                        "component": "Card",
+                        "child": "a19"
+                    },
+                    {
+                        "id": "l20",
+                        "component": "Text",
+                        "text": "Task number 21",
+                        "weight": 1
+                    },
+                    {
+                        "id": "s20",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Completed"
+                    },
+                    {
+                        "id": "t20",
+                        "component": "Row",
+                        "align": "center",
+                        "children": [
+                            "l20",
+                            "s20"
+                        ]
+                    },
+                    {
+                        "id": "b20",
+                        "component": "Column",
+                        "children": [
+                            "t20"
+                        ]
+                    },
+                    {
+                        "id": "a20",
+                        "component": "Button",
+                        "variant": "borderless",
+                        "child": "b20",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "task",
+                                    "id": 21,
+                                    "label": "Task number 21"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c20",
+                        "component": "Card",
+                        "child": "a20"
+                    },
+                    {
+                        "id": "l21",
+                        "component": "Text",
+                        "text": "Task number 22",
+                        "weight": 1
+                    },
+                    {
+                        "id": "s21",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Pending"
+                    },
+                    {
+                        "id": "t21",
+                        "component": "Row",
+                        "align": "center",
+                        "children": [
+                            "l21",
+                            "s21"
+                        ]
+                    },
+                    {
+                        "id": "b21",
+                        "component": "Column",
+                        "children": [
+                            "t21"
+                        ]
+                    },
+                    {
+                        "id": "a21",
+                        "component": "Button",
+                        "variant": "borderless",
+                        "child": "b21",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "task",
+                                    "id": 22,
+                                    "label": "Task number 22"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c21",
+                        "component": "Card",
+                        "child": "a21"
+                    },
+                    {
+                        "id": "l22",
+                        "component": "Text",
+                        "text": "Task number 23",
+                        "weight": 1
+                    },
+                    {
+                        "id": "s22",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Completed"
+                    },
+                    {
+                        "id": "t22",
+                        "component": "Row",
+                        "align": "center",
+                        "children": [
+                            "l22",
+                            "s22"
+                        ]
+                    },
+                    {
+                        "id": "b22",
+                        "component": "Column",
+                        "children": [
+                            "t22"
+                        ]
+                    },
+                    {
+                        "id": "a22",
+                        "component": "Button",
+                        "variant": "borderless",
+                        "child": "b22",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "task",
+                                    "id": 23,
+                                    "label": "Task number 23"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c22",
+                        "component": "Card",
+                        "child": "a22"
+                    },
+                    {
+                        "id": "l23",
+                        "component": "Text",
+                        "text": "Task number 24",
+                        "weight": 1
+                    },
+                    {
+                        "id": "s23",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Pending"
+                    },
+                    {
+                        "id": "t23",
+                        "component": "Row",
+                        "align": "center",
+                        "children": [
+                            "l23",
+                            "s23"
+                        ]
+                    },
+                    {
+                        "id": "b23",
+                        "component": "Column",
+                        "children": [
+                            "t23"
+                        ]
+                    },
+                    {
+                        "id": "a23",
+                        "component": "Button",
+                        "variant": "borderless",
+                        "child": "b23",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "task",
+                                    "id": 24,
+                                    "label": "Task number 24"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c23",
+                        "component": "Card",
+                        "child": "a23"
+                    },
+                    {
+                        "id": "l24",
+                        "component": "Text",
+                        "text": "Task number 25",
+                        "weight": 1
+                    },
+                    {
+                        "id": "s24",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Completed"
+                    },
+                    {
+                        "id": "t24",
+                        "component": "Row",
+                        "align": "center",
+                        "children": [
+                            "l24",
+                            "s24"
+                        ]
+                    },
+                    {
+                        "id": "b24",
+                        "component": "Column",
+                        "children": [
+                            "t24"
+                        ]
+                    },
+                    {
+                        "id": "a24",
+                        "component": "Button",
+                        "variant": "borderless",
+                        "child": "b24",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "task",
+                                    "id": 25,
+                                    "label": "Task number 25"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c24",
+                        "component": "Card",
+                        "child": "a24"
+                    },
+                    {
+                        "id": "l25",
+                        "component": "Text",
+                        "text": "Task number 26",
+                        "weight": 1
+                    },
+                    {
+                        "id": "s25",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Pending"
+                    },
+                    {
+                        "id": "t25",
+                        "component": "Row",
+                        "align": "center",
+                        "children": [
+                            "l25",
+                            "s25"
+                        ]
+                    },
+                    {
+                        "id": "b25",
+                        "component": "Column",
+                        "children": [
+                            "t25"
+                        ]
+                    },
+                    {
+                        "id": "a25",
+                        "component": "Button",
+                        "variant": "borderless",
+                        "child": "b25",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "task",
+                                    "id": 26,
+                                    "label": "Task number 26"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c25",
+                        "component": "Card",
+                        "child": "a25"
+                    },
+                    {
+                        "id": "l26",
+                        "component": "Text",
+                        "text": "Task number 27",
+                        "weight": 1
+                    },
+                    {
+                        "id": "s26",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Completed"
+                    },
+                    {
+                        "id": "t26",
+                        "component": "Row",
+                        "align": "center",
+                        "children": [
+                            "l26",
+                            "s26"
+                        ]
+                    },
+                    {
+                        "id": "b26",
+                        "component": "Column",
+                        "children": [
+                            "t26"
+                        ]
+                    },
+                    {
+                        "id": "a26",
+                        "component": "Button",
+                        "variant": "borderless",
+                        "child": "b26",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "task",
+                                    "id": 27,
+                                    "label": "Task number 27"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c26",
+                        "component": "Card",
+                        "child": "a26"
+                    },
+                    {
+                        "id": "l27",
+                        "component": "Text",
+                        "text": "Task number 28",
+                        "weight": 1
+                    },
+                    {
+                        "id": "s27",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Pending"
+                    },
+                    {
+                        "id": "t27",
+                        "component": "Row",
+                        "align": "center",
+                        "children": [
+                            "l27",
+                            "s27"
+                        ]
+                    },
+                    {
+                        "id": "b27",
+                        "component": "Column",
+                        "children": [
+                            "t27"
+                        ]
+                    },
+                    {
+                        "id": "a27",
+                        "component": "Button",
+                        "variant": "borderless",
+                        "child": "b27",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "task",
+                                    "id": 28,
+                                    "label": "Task number 28"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c27",
+                        "component": "Card",
+                        "child": "a27"
+                    },
+                    {
+                        "id": "l28",
+                        "component": "Text",
+                        "text": "Task number 29",
+                        "weight": 1
+                    },
+                    {
+                        "id": "s28",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Completed"
+                    },
+                    {
+                        "id": "t28",
+                        "component": "Row",
+                        "align": "center",
+                        "children": [
+                            "l28",
+                            "s28"
+                        ]
+                    },
+                    {
+                        "id": "b28",
+                        "component": "Column",
+                        "children": [
+                            "t28"
+                        ]
+                    },
+                    {
+                        "id": "a28",
+                        "component": "Button",
+                        "variant": "borderless",
+                        "child": "b28",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "task",
+                                    "id": 29,
+                                    "label": "Task number 29"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c28",
+                        "component": "Card",
+                        "child": "a28"
+                    },
+                    {
+                        "id": "l29",
+                        "component": "Text",
+                        "text": "Task number 30",
+                        "weight": 1
+                    },
+                    {
+                        "id": "s29",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Pending"
+                    },
+                    {
+                        "id": "t29",
+                        "component": "Row",
+                        "align": "center",
+                        "children": [
+                            "l29",
+                            "s29"
+                        ]
+                    },
+                    {
+                        "id": "b29",
+                        "component": "Column",
+                        "children": [
+                            "t29"
+                        ]
+                    },
+                    {
+                        "id": "a29",
+                        "component": "Button",
+                        "variant": "borderless",
+                        "child": "b29",
+                        "action": {
+                            "event": {
+                                "name": "docsync.open",
+                                "context": {
+                                    "kind": "task",
+                                    "id": 30,
+                                    "label": "Task number 30"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "c29",
+                        "component": "Card",
+                        "child": "a29"
+                    },
+                    {
                         "id": "rows",
                         "component": "List",
                         "direction": "vertical",
@@ -1219,14 +2292,26 @@
                             "c8",
                             "c9",
                             "c10",
-                            "c11"
+                            "c11",
+                            "c12",
+                            "c13",
+                            "c14",
+                            "c15",
+                            "c16",
+                            "c17",
+                            "c18",
+                            "c19",
+                            "c20",
+                            "c21",
+                            "c22",
+                            "c23",
+                            "c24",
+                            "c25",
+                            "c26",
+                            "c27",
+                            "c28",
+                            "c29"
                         ]
-                    },
-                    {
-                        "id": "more",
-                        "component": "Text",
-                        "variant": "caption",
-                        "text": "and 18 more"
                     }
                 ]
             }
@@ -1236,14 +2321,14 @@
         {
             "version": "v0.9",
             "createSurface": {
-                "surfaceId": "list_list_financial_years_f7255e69",
+                "surfaceId": "list_list_financial_years_e877f1cb",
                 "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
             }
         },
         {
             "version": "v0.9",
             "updateComponents": {
-                "surfaceId": "list_list_financial_years_f7255e69",
+                "surfaceId": "list_list_financial_years_e877f1cb",
                 "components": [
                     {
                         "id": "root",
@@ -1548,7 +2633,6 @@
                     {
                         "id": "open",
                         "component": "Button",
-                        "variant": "primary",
                         "child": "open_label",
                         "action": {
                             "event": {
@@ -1557,7 +2641,8 @@
                                     "url": "open.php?kind=task&id=512"
                                 }
                             }
-                        }
+                        },
+                        "variant": "primary"
                     },
                     {
                         "id": "open_label",
@@ -1621,6 +2706,392 @@
                         "id": "f3",
                         "component": "Text",
                         "text": "Outstanding ₹90,014.61"
+                    }
+                ]
+            }
+        }
+    ],
+    "confirm_preview": [
+        {
+            "version": "v0.9",
+            "createSurface": {
+                "surfaceId": "confirm_create_invoice",
+                "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
+            }
+        },
+        {
+            "version": "v0.9",
+            "updateComponents": {
+                "surfaceId": "confirm_create_invoice",
+                "components": [
+                    {
+                        "id": "root",
+                        "component": "Column",
+                        "children": [
+                            "title",
+                            "summary",
+                            "warn0",
+                            "buttons"
+                        ]
+                    },
+                    {
+                        "id": "title",
+                        "component": "Text",
+                        "text": "Please confirm"
+                    },
+                    {
+                        "id": "summary",
+                        "component": "Text",
+                        "text": "Invoice 03/2026-27 for ABC Traders, dated 2026-10-02, from ABC & Co: 2 task(s), ₹4,000 + GST ₹720 = ₹4,720."
+                    },
+                    {
+                        "id": "warn0",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "1 task(s) have no fee set on the sub-task and are invoiced at 0: #812."
+                    },
+                    {
+                        "id": "buttons",
+                        "component": "Row",
+                        "children": [
+                            "preview",
+                            "yes",
+                            "no"
+                        ]
+                    },
+                    {
+                        "id": "preview",
+                        "component": "Button",
+                        "child": "preview_label",
+                        "action": {
+                            "event": {
+                                "name": "docsync.preview",
+                                "context": {
+                                    "kind": "draft",
+                                    "action": "create_invoice",
+                                    "args": "{\"client_id\":12,\"task_ids\":[812,813],\"account_header_id\":4,\"with_gst\":1,\"invoice_date\":\"2026-10-02\",\"client_address_id\":9}"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "preview_label",
+                        "component": "Text",
+                        "text": "Preview"
+                    },
+                    {
+                        "id": "yes",
+                        "component": "Button",
+                        "variant": "primary",
+                        "child": "yes_label",
+                        "action": {
+                            "event": {
+                                "name": "docsync.commit",
+                                "context": {
+                                    "action": "create_invoice",
+                                    "args": "{\"client_id\":12,\"task_ids\":[812,813],\"account_header_id\":4,\"with_gst\":1,\"invoice_date\":\"2026-10-02\",\"client_address_id\":9}"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "yes_label",
+                        "component": "Text",
+                        "text": "Confirm"
+                    },
+                    {
+                        "id": "no",
+                        "component": "Button",
+                        "child": "no_label",
+                        "action": {
+                            "event": {
+                                "name": "docsync.cancel",
+                                "context": {
+                                    "action": "create_invoice"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "no_label",
+                        "component": "Text",
+                        "text": "Cancel"
+                    }
+                ]
+            }
+        }
+    ],
+    "link_invoice": [
+        {
+            "version": "v0.9",
+            "createSurface": {
+                "surfaceId": "link_invoice_301",
+                "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
+            }
+        },
+        {
+            "version": "v0.9",
+            "updateComponents": {
+                "surfaceId": "link_invoice_301",
+                "components": [
+                    {
+                        "id": "root",
+                        "component": "Card",
+                        "child": "card_body"
+                    },
+                    {
+                        "id": "card_body",
+                        "component": "Column",
+                        "children": [
+                            "title",
+                            "actions"
+                        ]
+                    },
+                    {
+                        "id": "title",
+                        "component": "Text",
+                        "text": "Created invoice 03/2026-27"
+                    },
+                    {
+                        "id": "actions",
+                        "component": "Row",
+                        "children": [
+                            "preview",
+                            "open"
+                        ]
+                    },
+                    {
+                        "id": "preview",
+                        "component": "Button",
+                        "variant": "primary",
+                        "child": "preview_label",
+                        "action": {
+                            "event": {
+                                "name": "docsync.preview",
+                                "context": {
+                                    "kind": "invoice",
+                                    "id": 301
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "preview_label",
+                        "component": "Text",
+                        "text": "Preview"
+                    },
+                    {
+                        "id": "open",
+                        "component": "Button",
+                        "child": "open_label",
+                        "action": {
+                            "event": {
+                                "name": "docsync.navigate",
+                                "context": {
+                                    "url": "open.php?kind=invoice&id=301"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "open_label",
+                        "component": "Text",
+                        "text": "Open invoice"
+                    }
+                ]
+            }
+        }
+    ],
+    "fix": [
+        {
+            "version": "v0.9",
+            "createSurface": {
+                "surfaceId": "fix_client_contact_2144",
+                "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
+            }
+        },
+        {
+            "version": "v0.9",
+            "updateComponents": {
+                "surfaceId": "fix_client_contact_2144",
+                "components": [
+                    {
+                        "id": "root",
+                        "component": "Card",
+                        "child": "card_body"
+                    },
+                    {
+                        "id": "card_body",
+                        "component": "Column",
+                        "children": [
+                            "title",
+                            "line0",
+                            "actions"
+                        ]
+                    },
+                    {
+                        "id": "title",
+                        "component": "Text",
+                        "text": "Add an email for Acme Traders"
+                    },
+                    {
+                        "id": "line0",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": "Fill it in here and I will carry on."
+                    },
+                    {
+                        "id": "actions",
+                        "component": "Row",
+                        "children": [
+                            "fix",
+                            "open"
+                        ]
+                    },
+                    {
+                        "id": "fix",
+                        "component": "Button",
+                        "variant": "primary",
+                        "child": "fix_label",
+                        "action": {
+                            "event": {
+                                "name": "docsync.form",
+                                "context": {
+                                    "form": "client_contact",
+                                    "ids": "2144",
+                                    "need": "email",
+                                    "retry": "email invoice 07/2026-27"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "fix_label",
+                        "component": "Text",
+                        "text": "Enter information"
+                    },
+                    {
+                        "id": "open",
+                        "component": "Button",
+                        "child": "open_label",
+                        "action": {
+                            "event": {
+                                "name": "docsync.navigate",
+                                "context": {
+                                    "url": "open.php?kind=client_edit&id=2144"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "open_label",
+                        "component": "Text",
+                        "text": "Open page"
+                    }
+                ]
+            }
+        }
+    ],
+    "confirm_keyed": [
+        {
+            "version": "v0.9",
+            "createSurface": {
+                "surfaceId": "confirm_create_invoice_32c987d9",
+                "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
+            }
+        },
+        {
+            "version": "v0.9",
+            "updateComponents": {
+                "surfaceId": "confirm_create_invoice_32c987d9",
+                "components": [
+                    {
+                        "id": "root",
+                        "component": "Column",
+                        "children": [
+                            "title",
+                            "summary",
+                            "buttons"
+                        ]
+                    },
+                    {
+                        "id": "title",
+                        "component": "Text",
+                        "text": "Please confirm"
+                    },
+                    {
+                        "id": "summary",
+                        "component": "Text",
+                        "text": "Invoice 04/2026-27 for Acme Traders: 1 task(s), Rs 1,500."
+                    },
+                    {
+                        "id": "buttons",
+                        "component": "Row",
+                        "children": [
+                            "preview",
+                            "yes",
+                            "no"
+                        ]
+                    },
+                    {
+                        "id": "preview",
+                        "component": "Button",
+                        "child": "preview_label",
+                        "action": {
+                            "event": {
+                                "name": "docsync.preview",
+                                "context": {
+                                    "kind": "draft",
+                                    "action": "create_invoice",
+                                    "args": "{\"client_id\":5,\"task_ids\":[815],\"account_header_id\":2}"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "preview_label",
+                        "component": "Text",
+                        "text": "Preview"
+                    },
+                    {
+                        "id": "yes",
+                        "component": "Button",
+                        "variant": "primary",
+                        "child": "yes_label",
+                        "action": {
+                            "event": {
+                                "name": "docsync.commit",
+                                "context": {
+                                    "action": "create_invoice",
+                                    "args": "{\"client_id\":5,\"task_ids\":[815],\"account_header_id\":2}",
+                                    "key": "32c987d9"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "yes_label",
+                        "component": "Text",
+                        "text": "Confirm"
+                    },
+                    {
+                        "id": "no",
+                        "component": "Button",
+                        "child": "no_label",
+                        "action": {
+                            "event": {
+                                "name": "docsync.cancel",
+                                "context": {
+                                    "action": "create_invoice",
+                                    "key": "32c987d9"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "id": "no_label",
+                        "component": "Text",
+                        "text": "Cancel"
                     }
                 ]
             }

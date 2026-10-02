@@ -42,7 +42,8 @@ class _ConfirmCardState extends ConsumerState<ConfirmCard> {
     // Through the ledger: the same proposal may also be answered by voice.
     final res = await ref
         .read(commitLedgerProvider.notifier)
-        .commit(_conv, widget.proposal.name, widget.proposal.commitArgs);
+        .commit(_conv, widget.proposal.name, widget.proposal.commitArgs,
+            proposalKey: widget.proposal.key);
     if (!mounted) return;
     setState(() {
       _phase = res.ok ? _Phase.committed : _Phase.idle;

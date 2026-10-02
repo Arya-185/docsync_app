@@ -23,6 +23,13 @@ class ChatMessage {
   /// actually rendered.
   final ConfirmProposal? confirm;
 
+  /// EVERY proposal in this turn, in order; [confirm] is the first of them.
+  ///
+  /// One message may carry several requests (server M5): "invoice 812 and invoice 815" is two
+  /// confirm cards in one reply. Each is answered on its own, so the bubble keeps them all —
+  /// before this, the second `confirm` event overwrote the first and its card had no fallback.
+  final List<ConfirmProposal> confirms;
+
   /// Blocks of [content] that an arriving surface says it replaces.
   ///
   /// A results list is sent TWICE — as cards and as prose — because a client that cannot draw
@@ -43,6 +50,7 @@ class ChatMessage {
     this.thinking = '',
     this.a2ui = const [],
     this.confirm,
+    this.confirms = const [],
     this.supersedes = const [],
   });
 
@@ -72,6 +80,7 @@ class ChatMessage {
     String? thinking,
     List<Map<String, dynamic>>? a2ui,
     ConfirmProposal? confirm,
+    List<ConfirmProposal>? confirms,
     List<String>? supersedes,
   }) =>
       ChatMessage(
@@ -82,6 +91,7 @@ class ChatMessage {
         thinking: thinking ?? this.thinking,
         a2ui: a2ui ?? this.a2ui,
         confirm: confirm ?? this.confirm,
+        confirms: confirms ?? this.confirms,
         supersedes: supersedes ?? this.supersedes,
       );
 
@@ -101,11 +111,12 @@ class ChatMessage {
           other.thinking == thinking &&
           identical(other.a2ui, a2ui) &&
           identical(other.confirm, confirm) &&
+          identical(other.confirms, confirms) &&
           identical(other.supersedes, supersedes);
 
   @override
   int get hashCode => Object.hash(role, content, citations, streaming, thinking,
-      a2ui.length, confirm, supersedes.length);
+      a2ui.length, confirm, confirms.length, supersedes.length);
 
   /// Rebuild a message loaded from the server.
   ///
@@ -117,9 +128,20 @@ class ChatMessage {
   /// it is the difference between watching a proposal appear and being able to act on it.
   factory ChatMessage.fromJson(Map<String, dynamic> j) {
     final meta = j['meta'] is Map ? Map<String, dynamic>.from(j['meta'] as Map) : null;
-    final proposal = meta != null && meta['confirm'] is Map
-        ? ConfirmProposal.fromJson(Map<String, dynamic>.from(meta['confirm'] as Map))
-        : null;
+    // `meta.confirms` (server M5) holds every card of a multi-part reply; an older message has
+    // only `meta.confirm`.
+    final proposals = meta != null && meta['confirms'] is List
+        ? (meta['confirms'] as List)
+            .whereType<Map>()
+            .map((m) => ConfirmProposal.fromJson(Map<String, dynamic>.from(m)))
+            .where((p) => p.name.isNotEmpty)
+            .toList()
+        : <ConfirmProposal>[];
+    final proposal = proposals.isNotEmpty
+        ? proposals.first
+        : meta != null && meta['confirm'] is Map
+            ? ConfirmProposal.fromJson(Map<String, dynamic>.from(meta['confirm'] as Map))
+            : null;
     final surfaces = meta != null && meta['a2ui'] is List
         ? (meta['a2ui'] as List)
             .whereType<Map>()
@@ -135,6 +157,7 @@ class ChatMessage {
           const [],
       a2ui: surfaces,
       confirm: proposal,
+      confirms: proposals.isNotEmpty ? proposals : (proposal == null ? const [] : [proposal]),
     );
   }
 }
@@ -178,11 +201,15 @@ class ConfirmProposal {
   final List<String> warnings;
   final Map<String, dynamic> commitArgs;
 
+  /// Which card this is when one reply carries several (server M5), or ''. 8 hex characters.
+  final String key;
+
   const ConfirmProposal({
     required this.name,
     this.summary = '',
     this.warnings = const [],
     this.commitArgs = const {},
+    this.key = '',
   });
 
   /// From a stored proposal (`meta.confirm`). The keys are the SSE contract's, so a card
@@ -194,7 +221,14 @@ class ConfirmProposal {
         commitArgs: j['commit_args'] is Map
             ? Map<String, dynamic>.from(j['commit_args'] as Map)
             : const {},
+        key: proposalKeyOf(j['key']),
       );
+
+  /// 8 lowercase hex characters, or '' — anything else is not a key the server made.
+  static String proposalKeyOf(Object? v) {
+    final k = v == null ? '' : '$v';
+    return RegExp(r'^[a-f0-9]{8}$').hasMatch(k) ? k : '';
+  }
 }
 
 /// The outcome of an ai_commit.php POST. On failure the card stays usable so the
@@ -203,6 +237,15 @@ class CommitResult {
   final bool ok;
   final String message;
   const CommitResult(this.ok, this.message);
+}
+
+/// A drawn preview (ai_preview.php): a whole HTML document and its title, or why not.
+class PreviewResult {
+  final bool ok;
+  final String title;
+  final String html;
+  final String message;
+  const PreviewResult(this.ok, {this.title = '', this.html = '', this.message = ''});
 }
 
 /// One line of the activity trail.
@@ -430,6 +473,7 @@ class RagEvent {
                 const [],
             // an OBJECT here, deliberately — see [ConfirmProposal.commitArgs].
             commitArgs: args is Map ? Map<String, dynamic>.from(args) : const {},
+            key: ConfirmProposal.proposalKeyOf(j['key']),
           ),
         );
       case 'unavailable':

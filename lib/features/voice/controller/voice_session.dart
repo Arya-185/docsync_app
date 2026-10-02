@@ -345,7 +345,7 @@ class VoiceSession extends Notifier<VoiceState> {
             }
           }
           state = state.copyWith(phase: VoicePhase.thinking);
-          final res = await ledger.commit(conv, c.name, c.args);
+          final res = await ledger.commit(conv, c.name, c.args, proposalKey: c.key);
           if (gen != _gen) return null;
           await _say([res.message.isEmpty ? (res.ok ? 'Done.' : 'That didn\'t work.') : speakable(res.message)], gen);
           return null;
@@ -607,12 +607,15 @@ class VoiceSession extends Notifier<VoiceState> {
     state = state.copyWith(phase: VoicePhase.idle, level: 0, note: note, clearNote: note == null);
   }
 
-  /// The proposal on [m] that nobody has answered yet.
+  /// The first proposal on [m] that nobody has answered yet. A reply with several cards (server
+  /// M5) is answered one card per spoken turn, in order.
   VoiceConfirm? _openConfirm(ChatMessage m) {
-    final c = confirmOf(m);
-    if (c == null) return null;
     final conv = ref.read(chatControllerProvider).conversationId;
-    return ref.read(commitLedgerProvider.notifier).entry(conv, c.name, c.args) == null ? c : null;
+    final ledger = ref.read(commitLedgerProvider.notifier);
+    for (final c in confirmsOf(m)) {
+      if (ledger.entry(conv, c.name, c.args) == null) return c;
+    }
+    return null;
   }
 
   /// A question with fixed answers (a picker), as opposed to optional chips.

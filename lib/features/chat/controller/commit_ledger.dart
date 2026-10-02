@@ -38,7 +38,12 @@ class CommitLedger extends Notifier<Map<String, CommitEntry>> {
 
   /// Commit once. A second call while one is in flight, after it succeeded, or after the user
   /// cancelled, writes nothing and says why. A FAILED commit is forgotten, so it can be retried.
-  Future<CommitResult> commit(int conv, String action, Map<String, dynamic> args) async {
+  ///
+  /// [proposalKey] is the card's key when one reply carried several (server M5), passed through
+  /// to ai_commit.php. The ledger itself stays keyed by what is WRITTEN: two cards in one reply
+  /// differ in their arguments.
+  Future<CommitResult> commit(int conv, String action, Map<String, dynamic> args,
+      {String proposalKey = ''}) async {
     final key = keyFor(conv, action, args);
     switch (state[key]?.phase) {
       case CommitPhase.working:
@@ -53,7 +58,9 @@ class CommitLedger extends Notifier<Map<String, CommitEntry>> {
     state = {...state, key: const CommitEntry(CommitPhase.working)};
     CommitResult res;
     try {
-      res = await ref.read(chatRepositoryProvider).commit(action, args, conv: conv);
+      res = await ref
+          .read(chatRepositoryProvider)
+          .commit(action, args, conv: conv, key: proposalKey);
     } catch (e) {
       res = CommitResult(false, 'Could not confirm: $e');
     }

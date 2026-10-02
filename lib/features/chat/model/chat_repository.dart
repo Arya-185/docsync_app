@@ -176,17 +176,27 @@ class ChatRepository {
   /// what dio sends — so the app can commit today. Setting a mismatched `Origin`
   /// would turn a working call into a 403. `X-DocSync-App` marks the app instead,
   /// so the loophole can be closed server-side once this build is out.
+  ///
+  /// [key] is the card's proposal key when the reply carried several (server M5); the server
+  /// then commits THAT card's stored arguments and records it as answered. Sent only when set,
+  /// so a lone card posts exactly what it always did.
   Future<CommitResult> commit(
     String action,
     Map<String, dynamic> args, {
     int conv = 0,
+    String key = '',
   }) async {
     try {
       final r = await _api.dio.post(
         _api.url('/app/ai_commit.php'),
         // `args` is a JSON STRING on the wire, but it is an OBJECT in
         // [ConfirmProposal]; encoding it twice is a `bad_request`.
-        data: {'action': action, 'args': jsonEncode(args), 'conv': conv},
+        data: {
+          'action': action,
+          'args': jsonEncode(args),
+          'conv': conv,
+          if (key.isNotEmpty) 'key': key,
+        },
         options: Options(
           contentType: Headers.formUrlEncodedContentType,
           headers: {'X-DocSync-App': '1'},
@@ -206,6 +216,56 @@ class ChatRepository {
       return CommitResult(false, _dioMessage(e));
     } catch (_) {
       return const CommitResult(false, 'Request failed.');
+    }
+  }
+
+  /// Draw a preview (server M3): `ai_preview.php` answers `{ok, title, html}` — a whole,
+  /// self-contained document (the logo is inlined) — or `{ok: false, message}`.
+  ///
+  /// Read-only on the server: it re-checks the session and the module grant, re-derives the
+  /// draft from the card's own arguments, and numbers, writes and sends nothing.
+  Future<PreviewResult> preview(Map<String, String> fields) async {
+    final body = await _postForm('/app/ai_preview.php', fields,
+        failed: 'The preview could not be drawn just now.');
+    final html = body['html'];
+    if (body['ok'] == true && html is String && html.isNotEmpty) {
+      return PreviewResult(true, title: '${body['title'] ?? 'Preview'}', html: html);
+    }
+    return PreviewResult(false,
+        message: '${body['message'] ?? 'The preview could not be drawn just now.'}');
+  }
+
+  /// "Enter information" (server M4): `op` is `schema`, `cities` or `save`.
+  ///
+  /// The values typed into the form go ONLY here — straight to the session-checked endpoint,
+  /// never into the chat, so an email or a PAN never reaches the model. And none comes back: a
+  /// field already on file is reported as `on_file`, never with its value.
+  Future<Map<String, dynamic>> fix(Map<String, String> fields) =>
+      _postForm('/app/ai_fix.php', fields, failed: 'That could not be done just now.');
+
+  /// POST a form and read a JSON object back, whatever the status: these endpoints answer
+  /// 400/403 with `{ok: false, message}` meant for the user.
+  Future<Map<String, dynamic>> _postForm(String path, Map<String, String> fields,
+      {required String failed}) async {
+    try {
+      final r = await _api.dio.post(
+        _api.url(path),
+        data: fields,
+        options: Options(
+          contentType: Headers.formUrlEncodedContentType,
+          headers: {'X-DocSync-App': '1'},
+        ),
+      );
+      final body = _asMap(r.data);
+      if (body != null) return body;
+      return {
+        'ok': false,
+        'message': r.statusCode == 401 ? 'Please sign in again.' : failed,
+      };
+    } on DioException catch (e) {
+      return {'ok': false, 'message': _dioMessage(e)};
+    } catch (_) {
+      return {'ok': false, 'message': failed};
     }
   }
 

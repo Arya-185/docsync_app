@@ -38,11 +38,18 @@ class VoiceConfirm {
     required this.args,
     required this.summary,
     this.warnings = const [],
+    this.key = '',
   });
   final String name;
   final Map<String, dynamic> args;
   final String summary;
   final List<String> warnings;
+
+  /// Which card, when one reply carries several (server M5); '' for a lone card.
+  final String key;
+
+  /// The surface this card is drawn in.
+  String get surfaceId => confirmSurfaceId(name, key);
 
   /// Sends something to someone outside the firm. A spoken yes to these gets a short spoken
   /// cancel window first (CommitRouter: send_invoice, chase_missing_documents with to=client).
@@ -50,29 +57,54 @@ class VoiceConfirm {
       (name == 'send_invoice' || name == 'chase_missing_documents') && args['to'] == 'client';
 }
 
-/// The pending confirm on [m], from the legacy proposal or the A2UI confirm surface.
+/// The FIRST pending confirm on [m], from the legacy proposal or the A2UI confirm surface.
 VoiceConfirm? confirmOf(ChatMessage m) {
-  final p = m.confirm;
-  if (p != null && p.name.isNotEmpty) {
-    return VoiceConfirm(
-        name: p.name, args: p.commitArgs, summary: p.summary, warnings: p.warnings);
+  final all = confirmsOf(m);
+  return all.isEmpty ? null : all.first;
+}
+
+/// EVERY confirm on [m], in order (server M5: one reply may carry several cards).
+///
+/// The proposals the `confirm` events carried come first — they are the full record. A confirm
+/// SURFACE with no matching proposal (a stored turn from before `meta.confirms`) is read off its
+/// Confirm button, exactly as before.
+List<VoiceConfirm> confirmsOf(ChatMessage m) {
+  final out = <VoiceConfirm>[];
+  final proposals = m.confirms.isNotEmpty
+      ? m.confirms
+      : (m.confirm == null ? const <ConfirmProposal>[] : [m.confirm!]);
+  for (final p in proposals) {
+    if (p.name.isEmpty) continue;
+    out.add(VoiceConfirm(
+        name: p.name,
+        args: p.commitArgs,
+        summary: p.summary,
+        warnings: p.warnings,
+        key: p.key));
   }
+  final seen = {for (final c in out) c.surfaceId};
   for (final comps in _componentSets(m.a2ui)) {
     for (final c in comps.values) {
       final ev = _event(c);
       if (ev?.name != 'docsync.commit') continue;
       final routed = routeA2uiAction(ev!.name, ev.context);
       if (routed is! CommitWrite) continue;
+      if (!seen.add(confirmSurfaceId(routed.action, routed.key))) break;
       final texts = comps.values
           .where((x) => x['component'] == 'Text' && x['id'] != 'title' && !_isLabel(comps, x))
           .toList();
       final summary = texts.isNotEmpty ? '${texts.first['text'] ?? ''}' : '';
       final warnings = texts.skip(1).map((x) => '${x['text'] ?? ''}').toList();
-      return VoiceConfirm(
-          name: routed.action, args: routed.args, summary: summary, warnings: warnings);
+      out.add(VoiceConfirm(
+          name: routed.action,
+          args: routed.args,
+          summary: summary,
+          warnings: warnings,
+          key: routed.key));
+      break;
     }
   }
-  return null;
+  return out;
 }
 
 /// The answerable question on [m]'s surfaces, or null. Multi-select pickers are offered as
@@ -107,7 +139,13 @@ VoiceChoices? choicesOf(ChatMessage m) {
     final chips = <VoiceOption>[];
     for (final c in comps.values.where((c) => c['component'] == 'Button')) {
       final ev = _event(c);
-      if (ev == null || ev.name == 'docsync.commit' || ev.name == 'docsync.cancel') continue;
+      // Not answers: Confirm/Cancel are the confirm flow's, and Preview / Enter information open
+      // a sheet on the screen — nothing a spoken word can fill in.
+      if (ev == null ||
+          const {'docsync.commit', 'docsync.cancel', 'docsync.preview', 'docsync.form'}
+              .contains(ev.name)) {
+        continue;
+      }
       if (ev.context.values.any((v) => _path(v) != null)) continue; // needs a bound value
       final action = routeA2uiAction(ev.name, ev.context);
       if (action is ActionFailed) continue;
@@ -182,5 +220,7 @@ String describeAction(A2uiAction a) => switch (a) {
       CommitWrite(:final action, :final args) => 'commit: $action ${jsonEncode(args)}',
       CancelWrite(:final action) => 'cancel: $action',
       OpenPage(:final url) => 'open: $url',
+      OpenPreview(:final request) => 'preview: $request',
+      OpenForm(:final request) => 'form: ${request.form} ${request.ids}',
       ActionFailed(:final message) => 'failed: $message',
     };

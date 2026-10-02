@@ -35,28 +35,174 @@ class SendChat extends A2uiAction {
 }
 
 /// POST a confirmed write to ai_commit.php.
+///
+/// [key] names WHICH card when one reply carries several (server M5: "invoice 812 and invoice
+/// 815" is two confirm cards, `confirm_create_invoice_<key>`). It is '' for a lone card, exactly
+/// as before, and is sent to ai_commit.php so the server commits that card's own arguments.
 class CommitWrite extends A2uiAction {
-  const CommitWrite(this.action, this.args);
+  const CommitWrite(this.action, this.args, {this.key = ''});
   final String action;
   final Map<String, dynamic> args;
+  final String key;
 
   @override
-  String toString() => 'CommitWrite($action, $args)';
+  String toString() => 'CommitWrite($action, $args${key.isEmpty ? '' : ', key: $key'})';
 }
 
-/// The user declined the proposal. Nothing is sent anywhere.
+/// The user declined the proposal. Nothing is sent anywhere. [key] as for [CommitWrite], so
+/// Cancel on one card leaves the others in the same reply alone.
 class CancelWrite extends A2uiAction {
-  const CancelWrite(this.action);
+  const CancelWrite(this.action, {this.key = ''});
   final String action;
+  final String key;
 
   @override
   bool operator ==(Object other) =>
-      other is CancelWrite && other.action == action;
+      other is CancelWrite && other.action == action && other.key == key;
   @override
-  int get hashCode => action.hashCode;
+  int get hashCode => Object.hash(action, key);
   @override
-  String toString() => 'CancelWrite($action)';
+  String toString() => 'CancelWrite($action${key.isEmpty ? '' : ', key: $key'})';
 }
+
+/// Draw a preview (server M3, `app/ai_preview.php`): what a confirm card would create or send,
+/// or an invoice that exists. Read-only — nothing is numbered, written or sent.
+class OpenPreview extends A2uiAction {
+  const OpenPreview(this.request);
+  final PreviewRequest request;
+
+  @override
+  bool operator ==(Object other) => other is OpenPreview && other.request == request;
+  @override
+  int get hashCode => request.hashCode;
+  @override
+  String toString() => 'OpenPreview($request)';
+}
+
+/// "Enter information" (server M4, `app/ai_fix.php`): the detail an action stopped on, typed
+/// into a form here; once saved, [FormRequest.retry] is asked again so the action carries on.
+class OpenForm extends A2uiAction {
+  const OpenForm(this.request);
+  final FormRequest request;
+
+  @override
+  bool operator ==(Object other) => other is OpenForm && other.request == request;
+  @override
+  int get hashCode => request.hashCode;
+  @override
+  String toString() => 'OpenForm($request)';
+}
+
+/// What a Preview button asks for: `{kind: 'draft', action, args}` for a confirm card (args is
+/// the card's commit_args as JSON TEXT, posted as-is), or `{kind: 'invoice', id}`.
+class PreviewRequest {
+  const PreviewRequest.draft(this.action, this.args)
+      : kind = 'draft',
+        id = 0;
+  const PreviewRequest.invoice(this.id)
+      : kind = 'invoice',
+        action = '',
+        args = '';
+  final String kind;
+  final String action;
+  final String args;
+  final int id;
+
+  /// The form fields ai_preview.php takes.
+  Map<String, String> get fields => kind == 'invoice'
+      ? {'kind': kind, 'id': '$id'}
+      : {'kind': kind, 'action': action, 'args': args};
+
+  @override
+  bool operator ==(Object other) =>
+      other is PreviewRequest &&
+      other.kind == kind &&
+      other.action == action &&
+      other.args == args &&
+      other.id == id;
+  @override
+  int get hashCode => Object.hash(kind, action, args, id);
+  @override
+  String toString() => kind == 'invoice' ? 'invoice #$id' : 'draft $action $args';
+}
+
+/// The forms "Enter information" may open (server `UiSurface::FIX_FORMS`).
+const fixForms = ['client_contact', 'client_address', 'task_fee'];
+
+/// A `docsync.form` context: which form, for which records ([ids] stays the comma list the
+/// server sent), the field that is [need]ed, and the question to ask again once saved.
+class FormRequest {
+  const FormRequest({required this.form, required this.ids, this.need = '', this.retry = ''});
+  final String form;
+  final String ids;
+  final String need;
+  final String retry;
+
+  @override
+  bool operator ==(Object other) =>
+      other is FormRequest &&
+      other.form == form &&
+      other.ids == ids &&
+      other.need == need &&
+      other.retry == retry;
+  @override
+  int get hashCode => Object.hash(form, ids, need, retry);
+  @override
+  String toString() => 'FormRequest($form, $ids, need: $need, retry: $retry)';
+}
+
+/// The Dart port of `previewRequest()` in web/src/a2ui-docsync.js. Null when the context is not
+/// one of the two shapes — a draft of a known-looking action with an object for args, or an
+/// invoice with a positive id.
+PreviewRequest? previewRequest(Map<String, Object?> context) {
+  final kind = firstValue(context['kind']);
+  if (kind == 'invoice') {
+    final id = int.tryParse(firstValue(context['id']).trim()) ?? 0;
+    return id > 0 ? PreviewRequest.invoice(id) : null;
+  }
+  if (kind == 'draft') {
+    final action = firstValue(context['action']);
+    if (!RegExp(r'^[a-z_]{3,40}$').hasMatch(action)) return null;
+    final raw = context['args'];
+    final args = raw is String ? raw : jsonEncode(raw ?? const <String, Object?>{});
+    try {
+      if (jsonDecode(args) is! Map) return null;
+    } catch (_) {
+      return null;
+    }
+    return PreviewRequest.draft(action, args);
+  }
+  return null;
+}
+
+/// The Dart port of `formRequest()` in web/src/a2ui-docsync.js.
+FormRequest? formRequest(Map<String, Object?> context) {
+  final form = firstValue(context['form']);
+  final ids = firstValue(context['ids']);
+  if (!fixForms.contains(form) ||
+      !RegExp(r'^[1-9]\d{0,9}(,[1-9]\d{0,9}){0,9}$').hasMatch(ids)) {
+    return null;
+  }
+  final need = firstValue(context['need']);
+  final retry = firstValue(context['retry']).trim();
+  return FormRequest(
+    form: form,
+    ids: ids,
+    need: RegExp(r'^[a-z_]{2,20}$').hasMatch(need) ? need : '',
+    retry: retry.length > 500 ? retry.substring(0, 500) : retry,
+  );
+}
+
+/// A confirm card's key (server `UiSurface::proposalKey`): 8 lowercase hex characters, or ''.
+String proposalKey(Object? v) {
+  final k = firstValue(v);
+  return RegExp(r'^[a-f0-9]{8}$').hasMatch(k) ? k : '';
+}
+
+/// The surface a confirm card lives in: `confirm_<action>` alone, `confirm_<action>_<key>` when
+/// it is one of several in a reply.
+String confirmSurfaceId(String action, String key) =>
+    key.isEmpty ? 'confirm_$action' : 'confirm_${action}_$key';
 
 /// Open a DocSync web page (a link card's "Open page"). [url] is the relative
 /// `open.php?kind=…&id=…` the server built, already checked against the allow-list.
@@ -150,7 +296,7 @@ A2uiAction routeA2uiAction(String? name, Map<String, Object?> context) {
       } catch (_) {
         return const ActionFailed('Could not read the confirmation details.');
       }
-      return CommitWrite(_str(context['action'], ''), args);
+      return CommitWrite(_str(context['action'], ''), args, key: proposalKey(context['key']));
 
     // A link card's "Open page" (server M5): the web page, in-app, on the app's session.
     case 'docsync.navigate':
@@ -161,7 +307,20 @@ A2uiAction routeA2uiAction(String? name, Map<String, Object?> context) {
       return OpenPage(url as String);
 
     case 'docsync.cancel':
-      return CancelWrite(_str(context['action'], ''));
+      return CancelWrite(_str(context['action'], ''), key: proposalKey(context['key']));
+
+    // Preview on a confirm card or an invoice card (server M3): drawn in a sheet on this screen.
+    case 'docsync.preview':
+      final req = previewRequest(context);
+      if (req == null) return const ActionFailed('There is nothing to preview here.');
+      return OpenPreview(req);
+
+    // "Enter information" (server M4): the context names the form and its records, never a
+    // value — what is typed goes straight to ai_fix.php, never into the chat or the model.
+    case 'docsync.form':
+      final req = formRequest(context);
+      if (req == null) return const ActionFailed('There is nothing to fill in here.');
+      return OpenForm(req);
 
     default:
       return ActionFailed(

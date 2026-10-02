@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:genui/genui.dart';
 
 import '../../model/a2ui_actions.dart';
+import 'a2ui_docsync_catalog.dart';
 
 /// Renders the A2UI surfaces the server composed for one assistant turn.
 ///
@@ -25,7 +26,13 @@ class A2uiSurfaceView extends StatefulWidget {
     required this.messages,
     required this.onAction,
     this.onRenderedChanged,
+    this.notes = const {},
   });
+
+  /// A line to show under — or, when [SurfaceNote.retired], INSTEAD of — a particular surface,
+  /// keyed by surface id. How a confirm card that has been answered says so: one reply may carry
+  /// several cards (server M5), and Confirm on one must leave the others as they are.
+  final Map<String, SurfaceNote> notes;
 
   /// The raw protocol messages for this turn, in arrival order.
   final List<Map<String, dynamic>> messages;
@@ -63,10 +70,11 @@ class _A2uiSurfaceViewState extends State<A2uiSurfaceView> {
   void initState() {
     super.initState();
     _controller = SurfaceController(catalogs: [
-      // Exactly the catalog the server names in every createSurface, and the same one the web
-      // renderer uses. asNoAssetCatalog drops image/audio/video, which UiSurface never emits
-      // and which would otherwise need asset plumbing this app does not have.
-      BasicCatalogItems.asNoAssetCatalog(),
+      // The catalog the server names in every createSurface, and the same one the web renderer
+      // uses — with DocSync's look on its items (a2ui_docsync_catalog.dart, the Dart half of the
+      // web's ai-a2ui.css). Built on asNoAssetCatalog, which drops image/audio/video: UiSurface
+      // never emits them and they would need asset plumbing this app does not have.
+      docSyncCatalog(),
     ]);
     _controller.surfaceUpdates.listen(_onSurfaceUpdate);
     _apply();
@@ -142,16 +150,25 @@ class _A2uiSurfaceViewState extends State<A2uiSurfaceView> {
       children: [
         for (final id in _order)
           Padding(
-            padding: const EdgeInsets.only(top: 6),
+            padding: const EdgeInsets.only(top: 8),
             // The full bubble width, so a card is as wide as the answer rather than its own text.
             child: SizedBox(
               width: double.infinity,
-              child: Theme(
-                data: surfaceTheme(theme),
-                child: Surface(
-                  surfaceContext: _controller.contextFor(id),
-                  actionDelegate: _DocSyncActionDelegate(widget.onAction),
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // An answered card gives way to the line saying what happened to it.
+                  if (widget.notes[id]?.retired != true)
+                    Theme(
+                      data: surfaceTheme(theme),
+                      child: Surface(
+                        surfaceContext: _controller.contextFor(id),
+                        actionDelegate: _DocSyncActionDelegate(widget.onAction),
+                      ),
+                    ),
+                  if (widget.notes[id] != null) _NoteLine(widget.notes[id]!),
+                ],
               ),
             ),
           ),
@@ -165,6 +182,66 @@ class _A2uiSurfaceViewState extends State<A2uiSurfaceView> {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// What happened to one surface: "Working…", the commit's own message, "Cancelled.", or why it
+/// failed. [retired] replaces the surface with the line — its buttons are spent.
+class SurfaceNote {
+  const SurfaceNote(this.text, {this.error = false, this.retired = false, this.cancelled = false});
+  final String text;
+  final bool error;
+  final bool retired;
+  final bool cancelled;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SurfaceNote &&
+      other.text == text &&
+      other.error == error &&
+      other.retired == retired &&
+      other.cancelled == cancelled;
+  @override
+  int get hashCode => Object.hash(text, error, retired, cancelled);
+}
+
+class _NoteLine extends StatelessWidget {
+  const _NoteLine(this.note);
+  final SurfaceNote note;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final color = note.error ? scheme.error : const Color(0xFF475467);
+    return Padding(
+      padding: EdgeInsets.only(top: note.retired ? 0 : 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 1, right: 6),
+            child: Icon(
+              note.error
+                  ? Icons.error_outline_rounded
+                  : note.cancelled
+                      ? Icons.do_not_disturb_on_outlined
+                      : note.retired
+                          ? Icons.check_circle_outline_rounded
+                          : Icons.hourglass_top_rounded,
+              size: 16,
+              color: note.error
+                  ? scheme.error
+                  : note.cancelled
+                      ? const Color(0xFF6B7280)
+                      : const Color(0xFF0F7B4D),
+            ),
+          ),
+          Expanded(
+            child: Text(note.text, style: TextStyle(fontSize: 13.5, color: color, height: 1.35)),
+          ),
+        ],
+      ),
     );
   }
 }
