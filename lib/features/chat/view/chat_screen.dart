@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/design/tokens.dart';
 import '../../../shared/widgets/mic_button.dart';
 import '../controller/chat_controller.dart';
+import 'widgets/capabilities_sheet.dart';
 import 'widgets/activity_trail.dart';
 import 'widgets/chat_bubble.dart';
 
@@ -71,6 +72,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     _scrollToEnd();
   }
 
+  /// An unfinished example from the help sheet: into the box, for the user to complete.
+  void _fill(String text) {
+    _input.text = text;
+    _input.selection = TextSelection.collapsed(offset: text.length);
+  }
+
+  void _help() => showCapabilities(context, onAsk: _send, onFill: _fill);
+
   /* Each section watches only what it draws.
 
      This was one `ref.watch(chatControllerProvider)` over the whole state, so every streamed
@@ -84,8 +93,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
 
     return Column(
       children: [
-        const _ChatHeader(),
-        Expanded(child: _Transcript(scroll: _scroll, onExample: _send)),
+        _ChatHeader(onHelp: _help),
+        Expanded(child: _Transcript(scroll: _scroll, onExample: _send, onHelp: _help)),
         const _TrailSection(),
         _InputSection(controller: _input, onSend: _send),
       ],
@@ -94,7 +103,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
 }
 
 class _ChatHeader extends ConsumerWidget {
-  const _ChatHeader();
+  const _ChatHeader({required this.onHelp});
+
+  final VoidCallback onHelp;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -107,6 +118,12 @@ class _ChatHeader extends ConsumerWidget {
       padding: const EdgeInsets.only(left: 8, right: 8),
       child: Row(
         children: [
+          // The small-talk replies point at this by name ("Tap See everything Ask AI can do").
+          IconButton(
+            tooltip: capabilitiesLabel,
+            icon: const Icon(Icons.info_outline_rounded, size: 20),
+            onPressed: onHelp,
+          ),
           const Spacer(),
           TextButton.icon(
             onPressed: sending
@@ -122,16 +139,17 @@ class _ChatHeader extends ConsumerWidget {
 }
 
 class _Transcript extends ConsumerWidget {
-  const _Transcript({required this.scroll, required this.onExample});
+  const _Transcript({required this.scroll, required this.onExample, required this.onHelp});
 
   final ScrollController scroll;
   final void Function(String) onExample;
+  final VoidCallback onHelp;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final messages =
         ref.watch(chatControllerProvider.select((s) => s.messages));
-    if (messages.isEmpty) return _EmptyState(onExample: onExample);
+    if (messages.isEmpty) return _EmptyState(onExample: onExample, onHelp: onHelp);
     return ListView.builder(
       controller: scroll,
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -179,8 +197,9 @@ class _InputSection extends ConsumerWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onExample});
+  const _EmptyState({required this.onExample, required this.onHelp});
   final void Function(String) onExample;
+  final VoidCallback onHelp;
 
   @override
   Widget build(BuildContext context) {
@@ -239,6 +258,12 @@ class _EmptyState extends StatelessWidget {
                   ),
                 ),
               ),
+            const SizedBox(height: Ds.s3),
+            TextButton.icon(
+              onPressed: onHelp,
+              icon: const Icon(Icons.info_outline_rounded, size: 18),
+              label: const Text(capabilitiesLabel),
+            ),
           ],
         ),
       ),

@@ -4,6 +4,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../core/providers.dart';
 import '../model/a2ui_navigate.dart';
+import '../model/task_file_view.dart';
 
 /// A DocSync web page opened from a link card's "Open page" (server M5: `app/open.php`).
 ///
@@ -88,6 +89,12 @@ class _WebPageScreenState extends ConsumerState<WebPageScreen> {
             _signedOut();
             return NavigationDecision.prevent;
           }
+          // The task page's View button: a WebView cannot show a PDF inline, so open the file
+          // in the phone's own viewer instead.
+          if (isTaskFileViewUrl(u)) {
+            _viewFile(u);
+            return NavigationDecision.prevent;
+          }
           return NavigationDecision.navigate;
         },
         // A server redirect is not always offered to onNavigationRequest; catch it here too.
@@ -101,6 +108,27 @@ class _WebPageScreenState extends ConsumerState<WebPageScreen> {
   }
 
   static bool _isLogin(Uri u) => u.path.endsWith('/login.php');
+
+  bool _viewing = false;
+
+  Future<void> _viewFile(Uri u) async {
+    if (_viewing) return; // one file at a time
+    _viewing = true;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(const SnackBar(
+      content: Text('Opening the file from the office PC…'),
+      duration: Duration(seconds: 2),
+    ));
+    try {
+      final err = await openTaskFile(ref.read(apiClientProvider), u);
+      if (err != null && mounted) {
+        messenger.hideCurrentSnackBar();
+        messenger.showSnackBar(SnackBar(content: Text(err)));
+      }
+    } finally {
+      _viewing = false;
+    }
+  }
 
   bool _closing = false;
 
