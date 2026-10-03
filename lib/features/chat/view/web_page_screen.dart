@@ -103,11 +103,41 @@ class _WebPageScreenState extends ConsumerState<WebPageScreen> {
           if (u != null && _isLogin(u)) _signedOut();
         },
       ))
+      // The task page reports failures with alert() ("Could not save that.") and may ask with
+      // confirm(). An Android WebView drops both silently unless the app draws them.
+      ..setOnJavaScriptAlertDialog((req) => _alert(req.message))
+      ..setOnJavaScriptConfirmDialog((req) => _confirm(req.message))
       ..loadRequest(target);
     if (mounted) setState(() => _controller = c);
   }
 
   static bool _isLogin(Uri u) => u.path.endsWith('/login.php');
+
+  Future<void> _alert(String message) async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (d) => AlertDialog(
+        content: Text(message),
+        actions: [TextButton(onPressed: () => Navigator.of(d).pop(), child: const Text('OK'))],
+      ),
+    );
+  }
+
+  Future<bool> _confirm(String message) async {
+    if (!mounted) return false;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (d) => AlertDialog(
+        content: Text(message),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(d).pop(false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.of(d).pop(true), child: const Text('OK')),
+        ],
+      ),
+    );
+    return ok ?? false;
+  }
 
   bool _viewing = false;
 
