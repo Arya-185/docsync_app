@@ -1,5 +1,6 @@
 import '../../../shared/models/citation.dart';
 import '../../../shared/models/util.dart';
+import 'ai_credits.dart';
 
 /// A chat message in a conversation.
 class ChatMessage {
@@ -377,6 +378,10 @@ class RagEvent {
   /// `final`: the turn ended because the user pressed Stop (`rag_stop.php`).
   final bool stopped;
 
+  /// `credits`: the chat counter after the turn was charged. Carried on an [RagEventType.ignore]
+  /// event, so nothing that switches over the event types has to change.
+  final AiCredits? credits;
+
   const RagEvent(
     this.type, {
     this.conversationId,
@@ -399,6 +404,7 @@ class RagEvent {
     this.supersedes,
     this.proposal,
     this.stopped = false,
+    this.credits,
   });
 
   factory RagEvent.fromJson(Map<String, dynamic> j) {
@@ -478,6 +484,8 @@ class RagEvent {
         );
       case 'unavailable':
         return RagEvent(RagEventType.unavailable, reason: (j['reason'] ?? '').toString());
+      case 'credits':
+        return RagEvent(RagEventType.ignore, message: t, credits: AiCredits.tryParse(j));
       case 'error':
         return RagEvent(RagEventType.error, message: (j['message'] ?? t).toString());
       default:

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/design/tokens.dart';
 import '../../chat/controller/chat_controller.dart';
 import '../../chat/view/chat_screen.dart';
+import '../../chat/view/widgets/credits_pill.dart';
 import '../../recent/view/recent_screen.dart';
 import '../../search/view/search_screen.dart';
 import '../../settings/view/settings_screen.dart';
@@ -110,6 +111,8 @@ class _Header extends StatelessWidget {
                     letterSpacing: -0.4,
                   )),
           const Spacer(),
+          const CreditsPill(), // AI credits this month; nothing for an uncapped member
+          const SizedBox(width: 6),
           _RoundIcon(icon: Icons.search_rounded, tooltip: 'Search documents', onTap: onSearch),
           const SizedBox(width: 4),
           _RoundIcon(icon: Icons.settings_outlined, tooltip: 'Settings', onTap: onSettings),

@@ -7,6 +7,7 @@ import '../../../core/config.dart';
 import '../../../core/providers.dart';
 import '../../../shared/models/citation.dart';
 import '../../clients/controller/client_directory.dart';
+import '../model/ai_credits.dart';
 import '../model/chat_models.dart';
 import '../model/chat_repository.dart';
 
@@ -345,6 +346,8 @@ class ChatController extends Notifier<ChatState> {
             updateAssistant(content: answer);
             break;
           case RagEventType.ignore:
+            // the `credits` event updates the header counter; usage/ping are just skipped
+            if (ev.credits != null) ref.read(aiCreditsProvider.notifier).set(ev.credits);
             break; // benign event (usage/ping) — keep streaming
         }
       }
